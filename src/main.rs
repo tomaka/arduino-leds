@@ -2,7 +2,7 @@
 #![no_main]
 
 use ruduino::Pin as _;
-use ruduino::cores::atmega328::port;
+use ruduino::cores::atmega328p::port;
 
 #[no_mangle]
 pub extern "C" fn main() {
@@ -12,7 +12,7 @@ pub extern "C" fn main() {
         ruduino::interrupt::without_interrupts(|| {
             for _ in 0..50 {  // Num LEDs
                 send_byte(255);
-                send_byte(255);
+                send_byte(0);
                 send_byte(0);
             }
         });
