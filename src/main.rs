@@ -38,12 +38,12 @@ fn send_byte(byte: u8) {
 fn send0(addr: *mut u8, pin: u8) {
     unsafe {
         core::arch::asm!(r#"
-            sbi 0x05, {mask}
+            sbi 0x25, {mask}
             nop
             nop
             nop
             nop
-            cbi 0x05, {mask}
+            cbi 0x25, {mask}
             nop
             nop
             nop
@@ -62,7 +62,7 @@ fn send0(addr: *mut u8, pin: u8) {
 fn send1(addr: *mut u8, pin: u8) {
     unsafe {
         core::arch::asm!(r#"
-            sbi 0x05, {mask}
+            sbi 0x25, {mask}
             nop
             nop
             nop
@@ -73,7 +73,7 @@ fn send1(addr: *mut u8, pin: u8) {
             nop
             nop
             nop
-            cbi 0x05, {mask}
+            cbi 0x25, {mask}
             nop
             nop
             nop
