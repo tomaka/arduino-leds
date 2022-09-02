@@ -15,16 +15,26 @@ pub extern "C" fn main() {
 
     data[0] = 255;
     data[1] = 255;
+    data[2] = 0;
     data[3] = 255;
+    data[4] = 0;
+    data[5] = 0;
 
     loop {
-        upload_data(&data);
+        upload_data::<0>(&data);
+        upload_data::<1>(&data);
+        upload_data::<2>(&data);
+        upload_data::<3>(&data);
+        upload_data::<4>(&data);
+        upload_data::<5>(&data);
+        upload_data::<6>(&data);
+        upload_data::<7>(&data);
     }
 }
 
-fn upload_data(input_data: &[u8]) {
+fn upload_data<const PIN: usize>(input_data: &[u8]) {
     // TODO: don't wait 50µs always
-    ruduino::delay::delay_us(50);
+    ruduino::delay::delay_us(280);
 
     ruduino::interrupt::without_interrupts(|| {
         unsafe {
@@ -70,7 +80,7 @@ fn upload_data(input_data: &[u8]) {
                 dec {nbytes}            // T= 16, if nbytes is 0 then the byte we just read is out of bounds
                 brne 0b                 // T= 17
             "#,
-                addr = const 0x25, mask = const 3,
+                addr = const 0x25, mask = const PIN,
 
                 input_data = in(reg_ptr) input_data.as_ptr(),
                 nbytes = in(reg) u8::try_from(input_data.len()).unwrap(),
