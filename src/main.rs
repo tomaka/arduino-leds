@@ -11,7 +11,7 @@ pub extern "C" fn main() {
 
     loop {
         ruduino::interrupt::without_interrupts(|| {
-            upload_data(&[255, 0, 0, 255, 0, 0]);
+            upload_data(&[255, 0, 0, 0, 255, 0, 0, 0]);
 
             /*for _ in 0..50 {
                 // Num LEDs
@@ -21,25 +21,7 @@ pub extern "C" fn main() {
             }*/
         });
 
-        port::B3::set_low();
-        ruduino::delay::delay_us(280);
-    }
-}
-
-#[inline(always)]
-fn send_byte(byte: u8) {
-    for n in 0..8 {
-        if (byte & (1 << n)) == 1 {
-            send1(
-                <<port::B3 as ruduino::Pin>::PORT as ruduino::Register>::ADDRESS,
-                3,
-            );
-        } else {
-            send0(
-                <<port::B3 as ruduino::Pin>::PORT as ruduino::Register>::ADDRESS,
-                3,
-            );
-        }
+        ruduino::delay::delay_us(50);
     }
 }
 
@@ -48,133 +30,55 @@ fn upload_data(input_data: &[u8]) {
         unsafe {
             // See <http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf>
             core::arch::asm!(r#"
-        0:
-            ldi {nbits}, 8
-            ld {val}, {input_data}+
-            cbi {addr}, {mask}
-            rjmp .+0
-            nop
-            dec {nbytes}
-            breq 2f
+                ldi {nbits}, 8
+                cbi {addr}, {mask}      // T=14, set pin output to 0
+                ld {low}, {port}
+                mov {high}, {low}
+                ori {high}, {mask}
+                ld {val}, {input_data}+
+                mov {tmp}, {low}
 
-        1:
-            sbi {addr}, {mask}
-            sbrc {val}, 7
-            mov {tmp}, {high}
-            dec {nbits}
-            nop
-            st {port}, {tmp}
-            mov {tmp}, {low}
-            breq 0b
-            rol {val}
-            rjmp .+0
-            cbi {addr}, {mask}
-            rjmp .+0
-            nop
-            rjmp 1b
-        
-        2:
-            nop
-    "#,
-        addr = const 0x25, mask = const 3,
-        port = in(reg_ptr) 0x25 as *mut u8,
+            0:
+                sbi {addr}, {mask}      // T= 0, set pin output to 1
+                sbrc {val}, 7           // T= 2, skip next instruction if bit 7 of val is clear
+                mov {tmp}, {high}       // T= ?, 
+                dec {nbits}             // T= 4, 
+                nop
+                st {port}, {tmp}        // T= 6, set pin output to tmp, so either "high" or "low" depending on bit 7 of "val"
+                mov {tmp}, {low}        // T= 8, reset tmp
+                breq 1f                 // T= 9, jump if nbits == 0
+                rol {val}               // T=10, rotate the value to write so that bit 7 becomes bit 6
+                rjmp .+0                // T=11, nop 2 cycles
+                cbi {addr}, {mask}      // T=13, set pin output to 0
+                rjmp .+0                // T=15, nop
+                nop
+                rjmp 0b                 // T=18, taking 2 cycles
 
-        input_data = in(reg_ptr) input_data.as_ptr(),
-        nbytes = in(reg) u8::try_from(input_data.len()).unwrap(),
+            1:
+                ldi {nbits}, 8          // T=11, reset nbits to 8
+                ld {val}, {input_data}+ // T=12, load the next byte to write
+                cbi {addr}, {mask}      // T=14, set pin output to 0
+                rjmp .+0                // T=16, nop
+                nop
+                dec {nbytes}            // T=19, if nbytes is 0 then the byte we just read is out of bounds
+                brne 0b                 // T=20, taking 2 cycles
+            "#,
+                addr = const 0x25, mask = const 3,
+                port = in(reg_ptr) 0x25 as *mut u8,
 
-        high = in(reg) 3u8,
-        low = in(reg) (!3) as u8,
+                input_data = in(reg_ptr) input_data.as_ptr(),
+                nbytes = in(reg) u8::try_from(input_data.len()).unwrap(),
 
-        // Temporary registers.
-        nbits = out(reg) _,
-        tmp = out(reg) _,
-        val = out(reg) _,
+                high = out(reg) _,
+                low = out(reg) _,
 
-        options(nostack));
-            /*
-             //  Instruction        Clock   Description                           Phase
-             "nextbit:\n\t"              // -    label                                     (T =  0)
-              "sbi  %0, %1\n\t"     // 2    signal HIGH                         (T =  2)
-              "sbrc %4, 7\n\t"       // 1-2  if MSB set                           (T =  ?)
-               "mov  %6, %3\n\t"  // 0-1   tmp'll set signal high          (T =  4)
-              "dec  %5\n\t"           // 1    decrease bitcount                (T =  5)
-              "nop\n\t"                  // 1    nop (idle 1 clock cycle)        (T =  6)
-              "st   %a2, %6\n\t"    // 2    set PORT to tmp                 (T =  8)
-              "mov  %6, %7\n\t"   // 1    reset tmp to low (default)     (T =  9)
-              "breq nextbyte\n\t"  // 1-2  if bitcount ==0 -> nextbyte  (T =  ?)
-              "rol  %4\n\t"             // 1    shift MSB leftwards              (T = 11)
-              "rjmp .+0\n\t"           // 2    nop nop                                (T = 13)
-              "cbi   %0, %1\n\t"    // 2    signal LOW                          (T = 15)
-              "rjmp .+0\n\t"           // 2    nop nop                                (T = 17)
-              "nop\n\t"                  // 1    nop                                        (T = 18)
-              "rjmp nextbit\n\t"     // 2    bitcount !=0 -> nextbit           (T = 20)
-             "nextbyte:\n\t"          // -    label                                       -
-              "ldi  %5, 8\n\t"         // 1    reset bitcount                       (T = 11)
-              "ld   %4, %a8+\n\t" // 2    val = *p++                             (T = 13)
-              "cbi   %0, %1\n\t"   // 2    signal LOW                           (T = 15)
-              "rjmp .+0\n\t"          // 2    nop nop                                 (T = 17)
-              "nop\n\t"                 // 1    nop                                        (T = 18)
-              "dec %9\n\t"           // 1    decrease bytecount             (T = 19)
-              "brne nextbit\n\t"    // 2    if bytecount !=0 -> nextbit     (T = 20)
-              ::
-              "I" (PORT_PIN),           // %1
-              "e" (&PORT),              // %a2
-              "r" (high),               // %3
-              "r" (val),                // %4
-              "r" (nbits),              // %5
-              "r" (tmp),                // %6
-              "r" (low),                // %7
-              "e" (p),                  // %a8
-              "w" (nbytes)              // %9
-            );)*/
+                // Temporary registers.
+                nbits = out(reg) _,
+                tmp = out(reg) _,
+                val = out(reg) _,
+
+                options(nostack)
+            );
         }
     })
-}
-
-#[inline(always)]
-fn send0(addr: *mut u8, pin: u8) {
-    unsafe {
-        core::arch::asm!(r#"
-            sbi 0x25, {mask}
-            nop
-            nop
-            nop
-            nop
-            cbi 0x25, {mask}
-            nop
-            nop
-            nop
-            nop
-            nop
-            nop
-            nop
-            nop
-            nop
-            nop
-        "#, mask = const 3, options(nostack, preserves_flags));
-    }
-}
-
-#[inline(always)]
-fn send1(addr: *mut u8, pin: u8) {
-    unsafe {
-        core::arch::asm!(r#"
-            sbi 0x25, {mask}
-            nop
-            nop
-            nop
-            nop
-            nop
-            nop
-            nop
-            nop
-            nop
-            nop
-            cbi 0x25, {mask}
-            nop
-            nop
-            nop
-            nop
-        "#, mask = const 3, options(nostack, preserves_flags));
-    }
 }
