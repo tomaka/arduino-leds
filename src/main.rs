@@ -1,3 +1,4 @@
+#![feature(asm_experimental_arch, asm_const)]
 #![no_std]
 #![no_main]
 
@@ -18,7 +19,7 @@ pub extern "C" fn main() {
         });
 
         port::B3::set_low();
-        ruduino::delay::delay_us(50);
+        ruduino::delay::delay_us(280);
     }
 }
 
@@ -26,34 +27,57 @@ pub extern "C" fn main() {
 fn send_byte(byte: u8) {
     for n in 0..8 {
         if (byte & (1 << n)) == 1 {
-            send1();
+            send1(<<port::B3 as ruduino::Pin>::PORT as ruduino::Register>::ADDRESS, 3);
         } else {
-            send0();
+            send0(<<port::B3 as ruduino::Pin>::PORT as ruduino::Register>::ADDRESS, 3);
         }
     }
 }
 
 #[inline(always)]
-fn send0() {
-    port::B3::set_high();
-    delay_ns(500);
-    port::B3::set_low();
-    delay_ns(2000);
+fn send0(addr: *mut u8, pin: u8) {
+    unsafe {
+        core::arch::asm!(r#"
+            sbi 0x05, {mask}
+            nop
+            nop
+            nop
+            nop
+            cbi 0x05, {mask}
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+        "#, mask = const 3);
+    }
 }
 
 #[inline(always)]
-fn send1() {
-    port::B3::set_high();
-    delay_ns(1200);
-    port::B3::set_low();
-    delay_ns(1300);
-}
-
-#[inline(always)]
-fn delay_ns(ns: u32) {
-    // Note: the division by 4 is done because each loop passed to `delay` is 4 cycles.
-    // See also <https://docs.rs/avr_delay/0.3.1/src/avr_delay/lib.rs.html#27-47>
-    let ns_lp = 1000000000 / (ruduino::config::CPU_FREQUENCY_HZ / 4);
-    let loops = (ns / ns_lp) as u32;
-    ruduino::delay::delay(u64::from(loops));
+fn send1(addr: *mut u8, pin: u8) {
+    unsafe {
+        core::arch::asm!(r#"
+            sbi 0x05, {mask}
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            cbi 0x05, {mask}
+            nop
+            nop
+            nop
+            nop
+        "#, mask = const 3);
+    }
 }
