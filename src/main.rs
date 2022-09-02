@@ -10,31 +10,17 @@ pub extern "C" fn main() {
     port::B3::set_output();
 
     loop {
-        ruduino::interrupt::without_interrupts(|| {
-            upload_data(&[255, 0, 0, 0, 255, 0, 0, 0]);
-
-            /*for _ in 0..50 {
-                // Num LEDs
-                send_byte(255);
-                send_byte(0);
-                send_byte(0);
-            }*/
-        });
-
-        ruduino::delay::delay_us(50);
+        upload_data(&[255, 0, 0, 0, 255, 0, 0, 0]);
     }
 }
 
 fn upload_data(input_data: &[u8]) {
+    ruduino::delay::delay_us(50);
+
     ruduino::interrupt::without_interrupts(|| {
         unsafe {
             // See <http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf>
             core::arch::asm!(r#"
-                ldi {nbits}, 8
-                cbi {addr}, {mask}      // T=14, set pin output to 0
-                ld {low}, {port}
-                mov {high}, {low}
-                ori {high}, {mask}
                 ld {val}, {input_data}+
                 mov {tmp}, {low}
 
@@ -44,7 +30,7 @@ fn upload_data(input_data: &[u8]) {
                 mov {tmp}, {high}       // T= ?, 
                 dec {nbits}             // T= 4, 
                 nop
-                st {port}, {tmp}        // T= 6, set pin output to tmp, so either "high" or "low" depending on bit 7 of "val"
+                st {addr_reg}, {tmp}    // T= 6, set pin output to tmp, so either "high" or "low" depending on bit 7 of "val"
                 mov {tmp}, {low}        // T= 8, reset tmp
                 breq 1f                 // T= 9, jump if nbits == 0
                 rol {val}               // T=10, rotate the value to write so that bit 7 becomes bit 6
@@ -64,16 +50,16 @@ fn upload_data(input_data: &[u8]) {
                 brne 0b                 // T=20, taking 2 cycles
             "#,
                 addr = const 0x25, mask = const 3,
-                port = in(reg_ptr) 0x25 as *mut u8,
+                addr_reg = in(reg_ptr) 0x25 as *mut u8,
 
                 input_data = in(reg_ptr) input_data.as_ptr(),
                 nbytes = in(reg) u8::try_from(input_data.len()).unwrap(),
 
-                high = out(reg) _,
-                low = out(reg) _,
+                high = in(reg) 3u8,
+                low = in(reg) 0u8,
 
                 // Temporary registers.
-                nbits = out(reg) _,
+                nbits = inout(reg) 8u8 => _,
                 tmp = out(reg) _,
                 val = out(reg) _,
 
