@@ -54,7 +54,7 @@ fn send0(addr: *mut u8, pin: u8) {
             nop
             nop
             nop
-        "#, mask = const 3);
+        "#, mask = const 3, options(nostack, preserves_flags));
     }
 }
 
@@ -78,6 +78,6 @@ fn send1(addr: *mut u8, pin: u8) {
             nop
             nop
             nop
-        "#, mask = const 3);
+        "#, mask = const 3, options(nostack, preserves_flags));
     }
 }
