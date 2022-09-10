@@ -1,30 +1,41 @@
-#![feature(asm_experimental_arch, asm_const, maybe_uninit_uninit_array, maybe_uninit_array_assume_init)]
+#![feature(
+    asm_experimental_arch,
+    asm_const,
+    maybe_uninit_uninit_array,
+    maybe_uninit_array_assume_init
+)]
 #![no_std]
 #![no_main]
 
-use ruduino::cores::atmega328p::port;
-use ruduino::Pin as _;
-
 #[no_mangle]
 pub extern "C" fn main() {
-    port::B0::set_output();
+    // Set port B0 as an output port.
+    unsafe {
+        core::arch::asm!("sbi {addr}, {pin}", addr = const 0x4, pin = const 0);
+    }
+
+    // Set port B1 as an output port.
+    unsafe {
+        core::arch::asm!("sbi {addr}, {pin}", addr = const 0x4, pin = const 1);
+    }
 
     // Note: we do shenanigans with MaybeUninit in order to avoid a linking error with memset
-    let data: [core::mem::MaybeUninit<u8>; 5 * 3] = core::mem::MaybeUninit::uninit_array();
+    let data: [core::mem::MaybeUninit<u8>; 50 * 3] = core::mem::MaybeUninit::uninit_array();
     let mut data = unsafe { core::mem::MaybeUninit::array_assume_init(data) };
 
-    data[0] = 255;
-    data[1] = 0;
-    data[2] = 0;
-    data[3] = 0;
-    data[4] = 0;
-    data[5] = 255;
-
     loop {
+        data[0] = data[0].wrapping_add(1);
+        data[1] = 0;
+        data[2] = 0;
+        data[3] = 0;
+        data[4] = 0;
+        data[5] = data[5].wrapping_add(1);
+
         upload_data::<0>(&data);
     }
 }
 
+/// Sends the given data to the given PIN of port B.
 fn upload_data<const PIN: usize>(input_data: &[u8]) {
     // TODO: don't wait 50µs always
     ruduino::delay::delay_us(280);
