@@ -1,4 +1,4 @@
-#![feature(asm_experimental_arch, asm_const)]
+#![feature(asm_experimental_arch, asm_const, abi_avr_interrupt)]
 #![no_std]
 #![no_main]
 
@@ -13,7 +13,10 @@ pub extern "C" fn main() {
 
     let mut data = [0u8; 50 * 3];
 
+    data[0] = 255;
+
     loop {
+        data[0] = data[0].wrapping_add(1);
         hal::upload_bport_data::<0>(&data);
     }
 }

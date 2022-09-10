@@ -1,6 +1,8 @@
-
 #[cfg(not(target_arch = "avr"))]
 compile_error!("Can only work on AVR");
+
+#[no_mangle]
+pub unsafe extern "avr-interrupt" fn __vector_11() {}
 
 pub fn enable_bport_out<const PIN: usize>() {
     unsafe {
@@ -15,15 +17,18 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
     // TODO: don't wait 50µs always
     ruduino::delay::delay_us(280);
 
-    ruduino::interrupt::without_interrupts(|| {
-        unsafe {
-            // See <http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf>
+    unsafe {
+        // See <http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf>
 
-            // To write a 1, we set the bit high for 10 cycles (625ns) then low for 4 cycles (250ns).
-            // To write a 0, we set the bit high for 4 cycles (250ns) then low for 10 cycles (625ns).
-            // Note that these timings don't count the time it takes to actually set or clear the
-            // bit (125ns twice).
-            core::arch::asm!(r#"
+        // To write a 1, we set the bit high for 10 cycles (625ns) then low for 4 cycles (250ns).
+        // To write a 0, we set the bit high for 4 cycles (250ns) then low for 10 cycles (625ns).
+        // Note that these timings don't count the time it takes to actually set or clear the
+        // bit (125ns twice).
+        core::arch::asm!(r#"
+                lds {tmp}, 0x3f  // SREG
+                push {tmp}
+                cli
+
                 ld {val}, X+
 
             0:
@@ -58,21 +63,23 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
                 mov {val}, {tmp}        // T= 15
                 dec {nbytes}            // T= 16, if nbytes is 0 then the byte we just read is out of bounds
                 brne 0b                 // T= 17
+
+                pop {tmp}
+                sts 0x3f, {tmp}     // SREG
             "#,
-                addr = const 0x5, pin = const PIN,
+            addr = const 0x5, pin = const PIN,
 
-                nbytes = in(reg) u8::try_from(input_data.len()).unwrap(),
+            nbytes = in(reg) u8::try_from(input_data.len()).unwrap(),
 
-                // Temporary registers.
-                nbits = inout(reg) 8u8 => _,
-                tmp = out(reg) _,
-                val = out(reg) _,
+            // Temporary registers.
+            nbits = inout(reg) 8u8 => _,
+            tmp = out(reg) _,
+            val = out(reg) _,
 
-                in("X") input_data.as_ptr(),
-                lateout("X") _,
+            in("X") input_data.as_ptr(),
+            lateout("X") _,
 
-                options(nostack)
-            );
-        }
-    })
+            options(preserves_flags)
+        );
+    }
 }
