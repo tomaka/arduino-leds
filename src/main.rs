@@ -1,9 +1,4 @@
-#![feature(
-    asm_experimental_arch,
-    asm_const,
-    maybe_uninit_uninit_array,
-    maybe_uninit_array_assume_init
-)]
+#![feature(asm_experimental_arch, asm_const)]
 #![no_std]
 #![no_main]
 
@@ -19,15 +14,13 @@ pub extern "C" fn main() {
         core::arch::asm!("sbi {addr}, {pin}", addr = const 0x4, pin = const 1);
     }
 
-    // Note: we do shenanigans with MaybeUninit in order to avoid a linking error with memset
-    let data: [core::mem::MaybeUninit<u8>; 50 * 3] = core::mem::MaybeUninit::uninit_array();
-    let mut data = unsafe { core::mem::MaybeUninit::array_assume_init(data) };
+    let mut data = [0u8; 50 * 3];
 
     loop {
         data[0] = data[0].wrapping_add(2);
         data[1] = data[1].wrapping_add(1);
         data[2] = data[2].wrapping_add(3);
-        data[3] = 0;
+        data[3] = 255;
         data[4] = 0;
         data[5] = data[5].wrapping_add(1);
 
