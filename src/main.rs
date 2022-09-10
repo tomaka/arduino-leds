@@ -71,10 +71,12 @@ pub extern "C" fn main() {
             Duration::from_nanos(u64::from(num_timer0_overflows) * 1024 * 6250 / 100)
         };
 
-        let mut iter = leds::led_colors(leds::Mode::Test, clock_value, 0).flat_map(|c| c);
+        let mut iter = leds::led_colors(leds::Mode::Test, clock_value, 0).flat_map(|c| {
+            // For some reason, the LED strip shows green as blue and vice versa, so we swap bytes.
+            [c[0], c[2], c[1]].into_iter()
+        });
 
         loop {
-            let mut wrote_any = false;
             let mut data_size = 0;
 
             for (i, o) in (&mut iter).zip(data_buffer.iter_mut()) {
