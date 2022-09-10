@@ -1,9 +1,6 @@
 #[cfg(not(target_arch = "avr"))]
 compile_error!("Can only work on AVR");
 
-#[no_mangle]
-pub unsafe extern "avr-interrupt" fn __vector_11() {}
-
 pub fn enable_bport_out<const PIN: usize>() {
     unsafe {
         core::arch::asm!("sbi {addr}, {pin}", addr = const 0x4, pin = const PIN);
@@ -25,7 +22,7 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
         // Note that these timings don't count the time it takes to actually set or clear the
         // bit (125ns twice).
         core::arch::asm!(r#"
-                lds {tmp}, 0x3f  // SREG
+                lds {tmp}, 0x5f  // SREG
                 push {tmp}
                 cli
 
@@ -65,7 +62,7 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
                 brne 0b                 // T= 17
 
                 pop {tmp}
-                sts 0x3f, {tmp}     // SREG
+                sts 0x5f, {tmp}     // SREG
             "#,
             addr = const 0x5, pin = const PIN,
 
@@ -78,8 +75,6 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
 
             in("X") input_data.as_ptr(),
             lateout("X") _,
-
-            options(preserves_flags)
         );
     }
 }
