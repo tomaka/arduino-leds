@@ -1,4 +1,7 @@
 
+#[cfg(not(target_arch = "avr"))]
+compile_error!("Can only work on AVR");
+
 pub fn enable_bport_out<const PIN: usize>() {
     unsafe {
         core::arch::asm!("sbi {addr}, {pin}", addr = const 0x4, pin = const PIN);
