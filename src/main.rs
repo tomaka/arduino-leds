@@ -10,7 +10,7 @@ pub extern "C" fn main() {
     port::B0::set_output();
 
     // Note: we do shenanigans with MaybeUninit in order to avoid a linking error with memset
-    let data: [core::mem::MaybeUninit<u8>; 50 * 3] = core::mem::MaybeUninit::uninit_array();
+    let data: [core::mem::MaybeUninit<u8>; 5 * 3] = core::mem::MaybeUninit::uninit_array();
     let mut data = unsafe { core::mem::MaybeUninit::array_assume_init(data) };
 
     data[0] = 255;
@@ -20,9 +20,9 @@ pub extern "C" fn main() {
     data[4] = 0;
     data[5] = 0;
 
-    loop {
+    //loop {
         upload_data::<0>(&data);
-    }
+    //}
 }
 
 fn upload_data<const PIN: usize>(input_data: &[u8]) {
@@ -41,13 +41,13 @@ fn upload_data<const PIN: usize>(input_data: &[u8]) {
                 ld {val}, {input_data}+
 
             0:
-                sbi {addr}, {pin}      // T= 0, set pin output to 1
+                sbi {addr}, {pin}       // T= 0, set pin output to 1
                 nop
                 nop
                 nop
 
                 sbrs {val}, 7           // T= 5, skip next instruction if bit 7 of val is set
-                cbi {addr}, {pin}      // set pin output to 0
+                cbi {addr}, {pin}       // set pin output to 0
 
                 dec {nbits}             // T= 7 or 8 (depending on whether bit 7 of val was set)
                 breq 1f                 // T= 8 or 9
@@ -56,7 +56,7 @@ fn upload_data<const PIN: usize>(input_data: &[u8]) {
                 nop
                 nop
                 sbrc {val}, 7           // T= 12 or 13, skip next instruction if bit 7 of val is clear
-                cbi {addr}, {pin}      // set pin output to 0
+                cbi {addr}, {pin}       // set pin output to 0
 
                 rol {val}               // T= 15, rotate the value to write so that bit 7 becomes bit 6
                 nop
@@ -67,7 +67,7 @@ fn upload_data<const PIN: usize>(input_data: &[u8]) {
                 ld {tmp}, {input_data}+ // T= 11 or 12, load the next byte to write
 
                 sbrc {val}, 7           // T= 12 or 13, skip next instruction if bit 7 of val is clear
-                cbi {addr}, {pin}      // set pin output to 0
+                cbi {addr}, {pin}       // set pin output to 0
 
                 mov {val}, {tmp}        // T= 15
                 dec {nbytes}            // T= 16, if nbytes is 0 then the byte we just read is out of bounds
