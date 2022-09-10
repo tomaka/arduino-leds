@@ -8,12 +8,22 @@ static mut NUM_TIMER0_OVERFLOWS: u32 = 0;
 
 #[no_mangle]
 pub extern "C" fn main() {
+    // Enable interrupts.
+    // They have to be enabled at some point for things to work, and there's no reason to not do
+    // it right at the beginning.
+    unsafe {
+        core::arch::asm!("sei");
+    }
+
     // Set ports B0 and B1 as output ports.
     // On the Arduino Uno, they are the ones marked "8" (B0) and "9" (B1) on DIGITAL side.
     hal::enable_bport_out::<0>();
     hal::enable_bport_out::<1>();
 
     // Enable the timer0 with a prescaler of 64.
+    // This means that every 64 cycles the clock timer increases by 0. After 16384 cycles
+    // (64 * 256), which is 1024µs, the timer overflows and an interrupt is generated. The
+    // interrupt handler increases `NUM_TIMER0_OVERFLOWS` by 1.
     unsafe {
         core::arch::asm!(
             r#"
@@ -34,10 +44,6 @@ pub extern "C" fn main() {
         );
     }
 
-    unsafe {
-        core::arch::asm!("sei");
-    }
-
     let mut data = [0u8; 50 * 3];
 
     data[0] = 255;
@@ -50,7 +56,6 @@ pub extern "C" fn main() {
         };
 
         data[0] = (unsafe { NUM_TIMER0_OVERFLOWS } & 0xff) as u8;
-        data[3] = data[3].wrapping_add(1);
         hal::upload_bport_data::<0>(&data);
     }
 }
