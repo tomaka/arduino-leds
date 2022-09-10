@@ -16,13 +16,13 @@ pub extern "C" fn main() {
     data[0] = 255;
     data[1] = 0;
     data[2] = 0;
-    data[3] = 255;
+    data[3] = 0;
     data[4] = 0;
-    data[5] = 0;
+    data[5] = 255;
 
-    //loop {
+    loop {
         upload_data::<0>(&data);
-    //}
+    }
 }
 
 fn upload_data<const PIN: usize>(input_data: &[u8]) {
@@ -38,7 +38,7 @@ fn upload_data<const PIN: usize>(input_data: &[u8]) {
             // Note that these timings don't count the time it takes to actually set or clear the
             // bit (125ns).
             core::arch::asm!(r#"
-                ld {val}, {input_data}+
+                ld {val}, X+
 
             0:
                 sbi {addr}, {pin}       // T= 0, set pin output to 1
@@ -64,7 +64,7 @@ fn upload_data<const PIN: usize>(input_data: &[u8]) {
 
             1:
                 ldi {nbits}, 8          // T= 10 or 11, reset nbits to 8
-                ld {tmp}, {input_data}+ // T= 11 or 12, load the next byte to write
+                ld {tmp}, X+ // T= 11 or 12, load the next byte to write
 
                 sbrc {val}, 7           // T= 12 or 13, skip next instruction if bit 7 of val is clear
                 cbi {addr}, {pin}       // set pin output to 0
@@ -75,13 +75,15 @@ fn upload_data<const PIN: usize>(input_data: &[u8]) {
             "#,
                 addr = const 0x5, pin = const PIN,
 
-                input_data = in(reg_ptr) input_data.as_ptr(),
                 nbytes = in(reg) u8::try_from(input_data.len()).unwrap(),
 
                 // Temporary registers.
                 nbits = inout(reg) 8u8 => _,
                 tmp = out(reg) _,
                 val = out(reg) _,
+
+                in("X") input_data.as_ptr(),
+                lateout("X") _,
 
                 options(nostack)
             );
