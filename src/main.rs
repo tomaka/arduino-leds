@@ -4,7 +4,7 @@
 
 mod hal;
 
-static mut NUM_TIMER0_OVERFLOWS: u8 = 0;
+static mut NUM_TIMER0_OVERFLOWS: u32 = 0;
 
 #[no_mangle]
 pub extern "C" fn main() {
@@ -49,7 +49,7 @@ pub extern "C" fn main() {
             val
         };
 
-        data[0] = unsafe { NUM_TIMER0_OVERFLOWS };
+        data[0] = (unsafe { NUM_TIMER0_OVERFLOWS } & 0xff) as u8;
         data[3] = data[3].wrapping_add(1);
         hal::upload_bport_data::<0>(&data);
     }
