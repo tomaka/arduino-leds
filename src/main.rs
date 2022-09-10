@@ -1,8 +1,16 @@
-#![feature(asm_experimental_arch, asm_const, abi_avr_interrupt)]
+#![feature(
+    asm_experimental_arch,
+    asm_const,
+    abi_avr_interrupt,
+    default_alloc_error_handler
+)]
 #![no_std]
 #![no_main]
 
+use core::time::Duration;
+
 mod hal;
+mod leds;
 
 static mut NUM_TIMER0_OVERFLOWS: u32 = 0;
 
@@ -44,23 +52,51 @@ pub extern "C" fn main() {
         );
     }
 
-    let mut data = [0u8; 50 * 3];
-
-    data[0] = 255;
+    let mut data_buffer = [0; 256];
 
     loop {
-        let timer = unsafe {
-            let val: u8;
-            core::arch::asm!(r#"lds {out}, 0x46"#, out = out(reg) val);
-            val
+        let clock_value = unsafe {
+            // TODO: ASM blocks a bit hacky
+            let sreg: u8;
+            let subtimer: u8;
+            let num_timer0_overflows: u32;
+            core::arch::asm!(r#"
+            lds {out}, 0x5f  // SREG
+            cli
+            "#, out = out(reg) sreg);
+            num_timer0_overflows = NUM_TIMER0_OVERFLOWS;
+            core::arch::asm!(r#"lds {out}, 0x46"#, out = out(reg) subtimer);
+            core::arch::asm!(r#"sts 0x5f, {sreg}"#, sreg = in(reg) sreg);
+
+            Duration::from_nanos(u64::from(num_timer0_overflows) * 1024 * 6250 / 100)
         };
 
-        data[0] = (unsafe { NUM_TIMER0_OVERFLOWS } & 0xff) as u8;
-        hal::upload_bport_data::<0>(&data);
+        let mut iter = leds::led_colors(leds::Mode::Test, clock_value, 0).flat_map(|c| c);
+
+        loop {
+            let mut wrote_any = false;
+            let mut data_size = 0;
+
+            for (i, o) in (&mut iter).zip(data_buffer.iter_mut()) {
+                *o = i;
+                data_size += 1;
+            }
+
+            if data_size == 0 {
+                break;
+            }
+
+            hal::upload_bport_data::<0>(&data_buffer[..data_size]);
+        }
     }
 }
 
 #[no_mangle]
 pub unsafe extern "avr-interrupt" fn __vector_16() {
     NUM_TIMER0_OVERFLOWS += 1;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn abort() {
+    loop {}
 }
