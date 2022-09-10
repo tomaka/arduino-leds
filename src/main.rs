@@ -7,21 +7,21 @@ use ruduino::Pin as _;
 
 #[no_mangle]
 pub extern "C" fn main() {
-    port::B3::set_output();
+    port::B0::set_output();
 
     // Note: we do shenanigans with MaybeUninit in order to avoid a linking error with memset
     let data: [core::mem::MaybeUninit<u8>; 50 * 3] = core::mem::MaybeUninit::uninit_array();
     let mut data = unsafe { core::mem::MaybeUninit::array_assume_init(data) };
 
     data[0] = 255;
-    data[1] = 255;
+    data[1] = 0;
     data[2] = 0;
     data[3] = 255;
     data[4] = 0;
     data[5] = 0;
 
     loop {
-        upload_data::<3>(&data);
+        upload_data::<0>(&data);
     }
 }
 
@@ -41,13 +41,13 @@ fn upload_data<const PIN: usize>(input_data: &[u8]) {
                 ld {val}, {input_data}+
 
             0:
-                sbi {addr}, {mask}      // T= 0, set pin output to 1
+                sbi {addr}, {pin}      // T= 0, set pin output to 1
                 nop
                 nop
                 nop
 
                 sbrs {val}, 7           // T= 5, skip next instruction if bit 7 of val is set
-                cbi {addr}, {mask}      // set pin output to 0
+                cbi {addr}, {pin}      // set pin output to 0
 
                 dec {nbits}             // T= 7 or 8 (depending on whether bit 7 of val was set)
                 breq 1f                 // T= 8 or 9
@@ -56,7 +56,7 @@ fn upload_data<const PIN: usize>(input_data: &[u8]) {
                 nop
                 nop
                 sbrc {val}, 7           // T= 12 or 13, skip next instruction if bit 7 of val is clear
-                cbi {addr}, {mask}      // set pin output to 0
+                cbi {addr}, {pin}      // set pin output to 0
 
                 rol {val}               // T= 15, rotate the value to write so that bit 7 becomes bit 6
                 nop
@@ -67,13 +67,13 @@ fn upload_data<const PIN: usize>(input_data: &[u8]) {
                 ld {tmp}, {input_data}+ // T= 11 or 12, load the next byte to write
 
                 sbrc {val}, 7           // T= 12 or 13, skip next instruction if bit 7 of val is clear
-                cbi {addr}, {mask}      // set pin output to 0
+                cbi {addr}, {pin}      // set pin output to 0
 
                 mov {val}, {tmp}        // T= 15
                 dec {nbytes}            // T= 16, if nbytes is 0 then the byte we just read is out of bounds
                 brne 0b                 // T= 17
             "#,
-                addr = const 0x05, mask = const PIN,
+                addr = const 0x5, pin = const PIN,
 
                 input_data = in(reg_ptr) input_data.as_ptr(),
                 nbytes = in(reg) u8::try_from(input_data.len()).unwrap(),
