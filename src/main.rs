@@ -9,12 +9,12 @@
 
 #[no_mangle]
 pub extern "C" fn main() {
-    // Set port B0 as an output port.
+    // Set port B0 as an output port. (on the Arduino Uno, this is the one marked "8" on DIGITAL side)
     unsafe {
         core::arch::asm!("sbi {addr}, {pin}", addr = const 0x4, pin = const 0);
     }
 
-    // Set port B1 as an output port.
+    // Set port B1 as an output port. (on the Arduino Uno, this is the one marked "9" on DIGITAL side)
     unsafe {
         core::arch::asm!("sbi {addr}, {pin}", addr = const 0x4, pin = const 1);
     }
@@ -24,9 +24,9 @@ pub extern "C" fn main() {
     let mut data = unsafe { core::mem::MaybeUninit::array_assume_init(data) };
 
     loop {
-        data[0] = data[0].wrapping_add(1);
-        data[1] = 0;
-        data[2] = 0;
+        data[0] = data[0].wrapping_add(2);
+        data[1] = data[1].wrapping_add(1);
+        data[2] = data[2].wrapping_add(3);
         data[3] = 0;
         data[4] = 0;
         data[5] = data[5].wrapping_add(1);
@@ -36,6 +36,8 @@ pub extern "C" fn main() {
 }
 
 /// Sends the given data to the given PIN of port B.
+///
+/// This takes around 1125ns per byte.
 fn upload_data<const PIN: usize>(input_data: &[u8]) {
     // TODO: don't wait 50µs always
     ruduino::delay::delay_us(280);
@@ -47,7 +49,7 @@ fn upload_data<const PIN: usize>(input_data: &[u8]) {
             // To write a 1, we set the bit high for 10 cycles (625ns) then low for 4 cycles (250ns).
             // To write a 0, we set the bit high for 4 cycles (250ns) then low for 10 cycles (625ns).
             // Note that these timings don't count the time it takes to actually set or clear the
-            // bit (125ns).
+            // bit (125ns twice).
             core::arch::asm!(r#"
                 ld {val}, X+
 
