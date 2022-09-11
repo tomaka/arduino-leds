@@ -10,9 +10,20 @@ pub fn enable_bport_out<const PIN: usize>() {
 /// Sends the given data to the given PIN of port B.
 ///
 /// This takes around 1125ns per byte.
+// TODO: document that multiples of 255 are preferred
 pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
-    // TODO: don't wait 50µs always
-    ruduino::delay::delay_us(280);
+    for chunk in input_data.chunks(255) {
+        upload_bport_data_inner::<PIN>(input_data.chunks(255).next().unwrap());
+    }
+}
+
+fn upload_bport_data_inner<const PIN: usize>(input_data: &[u8]) {
+    // The ASM code below doesn't like it when the length is 0.
+    if input_data.is_empty() {
+        return;
+    }
+
+    debug_assert!(input_data.len() <= 255);
 
     unsafe {
         // See <http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf>
@@ -75,6 +86,8 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
 
             in("X") input_data.as_ptr(),
             lateout("X") _,
+
+            options(preserves_flags)
         );
     }
 }
