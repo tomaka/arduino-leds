@@ -3,7 +3,7 @@ use core::{iter, time::Duration};
 const WEST_LEDS: usize = 22;
 const NORTH_LEDS: usize = 62;
 const SOUTH_LEDS: usize = 64; // Note: it's actually 64.5, as the corner cuts it in half, a bit annoying
-const EAST_LEDS: usize = 25; // TODO: maybe not correct
+const EAST_LEDS: usize = 25;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Mode {
