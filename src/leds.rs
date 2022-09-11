@@ -5,15 +5,22 @@ const NORTH_LEDS: usize = 62;
 const SOUTH_LEDS: usize = 64; // Note: it's actually 64.5, as the corner cuts it in half, a bit annoying
 const EAST_LEDS: usize = 25; // TODO: maybe not correct
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Mode {
     Off,
     Test,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Strip {
+    NorthWest,
+    SouthEast,
+}
+
 pub fn led_colors(
     mode: Mode,
     clock_value: Duration,
-    nw_strip: bool,
+    strip: Strip,
 ) -> impl Iterator<Item = [u8; 3]> {
     enum ModeIter<A, B> {
         Off(A),
@@ -39,12 +46,12 @@ pub fn led_colors(
     }
 
     match mode {
-        Mode::Off => ModeIter::Off(off_mode_colors(nw_strip)),
-        Mode::Test => ModeIter::Test(test_mode_colors(clock_value, nw_strip)),
+        Mode::Off => ModeIter::Off(off_mode_colors(strip)),
+        Mode::Test => ModeIter::Test(test_mode_colors(clock_value, strip)),
     }
 }
 
-fn test_mode_colors(clock_value: Duration, nw_strip: bool) -> impl Iterator<Item = [u8; 3]> {
+fn test_mode_colors(clock_value: Duration, nw_strip: Strip) -> impl Iterator<Item = [u8; 3]> {
     let south_leds_color = [((clock_value.as_millis() * 10) & 0xff) as u8 / 16, 0, 0];
     let east_leds_color = [0, 50 / 4, 0];
 
@@ -58,11 +65,10 @@ fn test_mode_colors(clock_value: Duration, nw_strip: bool) -> impl Iterator<Item
     .chain(iter::repeat([0, 0, 0]).take(EAST_LEDS))
 }
 
-fn off_mode_colors(nw_strip: bool) -> impl Iterator<Item = [u8; 3]> {
-    let count = if nw_strip {
-        NORTH_LEDS + WEST_LEDS
-    } else {
-        SOUTH_LEDS + EAST_LEDS
+fn off_mode_colors(strip: Strip) -> impl Iterator<Item = [u8; 3]> {
+    let count = match strip {
+        Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
+        Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
     };
 
     iter::repeat([0, 0, 0]).take(count)

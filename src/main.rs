@@ -73,34 +73,35 @@ pub extern "C" fn main() {
             Duration::from_nanos(u64::from(num_timer0_overflows) * 1024 * 6250 / 100)
         };
 
-        let mut iter = leds::led_colors(leds::Mode::Test, clock_value, false)
-            .flat_map(|c| {
-                // For some reason, the LED strip shows green as blue and vice versa, so we swap bytes.
-                [c[0], c[2], c[1]].into_iter()
-            })
-            .fuse();
+        for strip in [leds::Strip::NorthWest, leds::Strip::SouthEast] {
+            let mut iter = leds::led_colors(leds::Mode::Test, clock_value, strip)
+                .flat_map(|c| {
+                    // For some reason, the LED strip shows green as blue and vice versa, so we swap bytes.
+                    [c[0], c[2], c[1]].into_iter()
+                })
+                .fuse();
 
-        let mut data_size = 0usize;
-        let mut data_buffer_iter = data_buffer.iter_mut();
+            let mut data_size = 0usize;
+            let mut data_buffer_iter = data_buffer.iter_mut();
 
-        loop {
-            if data_size == usize::MAX - 1 {
-                break;
+            loop {
+                match (data_buffer_iter.next(), iter.next()) {
+                    (Some(o), Some(i)) => {
+                        *o = i;
+                        data_size += 1;
+                    }
+                    (None, Some(_)) => panic!(), // Note: the buffer must be large enough to hold all the data.
+                    _ => break,
+                }
             }
 
-            match (data_buffer_iter.next(), iter.next()) {
-                (Some(o), Some(i)) => {
-                    *o = i;
-                    data_size += 1;
-                }
-                (None, Some(_)) => panic!(), // Note: the buffer must be large enough to hold all the data.
-                _ => break,
+            match strip {
+                leds::Strip::NorthWest => hal::upload_bport_data::<0>(&data_buffer[..data_size]),
+                leds::Strip::SouthEast => hal::upload_bport_data::<1>(&data_buffer[..data_size]),
             }
         }
 
-        hal::upload_bport_data::<0>(&data_buffer[..data_size]);
-
-        // TODO: don't wait always
+        // TODO: don't wait the full duration
         ruduino::delay::delay_us(300);
     }
 }
