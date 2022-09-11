@@ -8,28 +8,19 @@ pub fn enable_bport_out<const PIN: usize>() {
 }
 
 /// Sends the given data to the given PIN of port B.
-///
-/// This takes around 1125ns per byte.
-// TODO: document that multiples of 255 are preferred
 pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
-    for chunk in input_data.chunks(255) {
-        upload_bport_data_inner::<PIN>(input_data.chunks(255).next().unwrap());
-    }
-}
-
-fn upload_bport_data_inner<const PIN: usize>(input_data: &[u8]) {
     // The ASM code below doesn't like it when the length is 0.
     if input_data.is_empty() {
         return;
     }
 
-    debug_assert!(input_data.len() <= 255);
+    debug_assert!(input_data.len() <= 256 * 255);
 
     unsafe {
         // See <http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf>
 
-        // To write a 1, we set the bit high for 10 cycles (625ns) then low for 4 cycles (250ns).
-        // To write a 0, we set the bit high for 4 cycles (250ns) then low for 10 cycles (625ns).
+        // To write a 1, we set the bit high for 10 cycles (1125ns) then low for 4 cycles (250ns).
+        // To write a 0, we set the bit high for 4 cycles (250ns) then low for 10 cycles (1125ns).
         // Note that these timings don't count the time it takes to actually set or clear the
         // bit (125ns twice).
         core::arch::asm!(r#"
@@ -54,40 +45,68 @@ fn upload_bport_data_inner<const PIN: usize>(input_data: &[u8]) {
                 nop
                 nop
                 nop
-                sbrc {val}, 7           // T= 12 or 13, skip next instruction if bit 7 of val is clear
+                nop
+                nop
+                nop
+                nop
+                nop
+                nop
+                sbrc {val}, 7           // T= 18 or 19, skip next instruction if bit 7 of val is clear
                 cbi {addr}, {pin}       // set pin output to 0
 
-                rol {val}               // T= 15, rotate the value to write so that bit 7 becomes bit 6
+                rol {val}               // T= 21, rotate the value to write so that bit 7 becomes bit 6
                 nop
-                rjmp 0b                 // T= 17
+                rjmp 0b                 // T= 23
 
             1:
                 ldi {nbits}, 8          // T= 10 or 11, reset nbits to 8
-                ld {tmp}, X+ // T= 11 or 12, load the next byte to write
+                dec {nbytes_low}        // T= 11 or 12, we update nbytes_low for the byte we've just sent
+                breq 2f                 // T= 12 or 13
+                ld {tmp}, X+            // T= 13 or 14, load the next byte to write
 
-                sbrc {val}, 7           // T= 12 or 13, skip next instruction if bit 7 of val is clear
+                nop
+                nop
+                nop
+                nop
+                sbrc {val}, 7           // T= 18 or 19, skip next instruction if bit 7 of val is clear
                 cbi {addr}, {pin}       // set pin output to 0
 
-                mov {val}, {tmp}        // T= 15
-                dec {nbytes}            // T= 16, if nbytes is 0 then the byte we just read is out of bounds
-                brne 0b                 // T= 17
+                mov {val}, {tmp}        // T= 21
+                nop
+                brne 0b                 // T= 23
+
+            2:
+                dec {nbytes_high}       // T= 14 or 15
+                breq 3f                 // T= 15 or 16, jump to the end of no more data
+                ldi {nbytes_low}, 255   // T= 16 or 17, reset nbytes_low
+                ld {tmp}, X+            // T= 17 or 18, load the next byte to write
+
+                sbrc {val}, 7           // T= 18 or 19, skip next instruction if bit 7 of val is clear
+                cbi {addr}, {pin}       // set pin output to 0
+
+                mov {val}, {tmp}        // T= 21
+                nop
+                rjmp 0b                 // T= 23
+
+            3:
+                cbi {addr}, {pin}       // set pin output to 0, honestly we don't care so much about timing at this point
 
                 pop {tmp}
                 sts 0x5f, {tmp}     // SREG
             "#,
             addr = const 0x5, pin = const PIN,
 
-            nbytes = in(reg) u8::try_from(input_data.len()).unwrap(),
+            nbytes_low = in(reg) u8::try_from(input_data.len() & 0xff).unwrap(),
+            nbytes_high = in(reg) u8::try_from((input_data.len() >> 8) & 0xff).unwrap() + 1,
 
             // Temporary registers.
             nbits = inout(reg) 8u8 => _,
             tmp = out(reg) _,
             val = out(reg) _,
 
-            in("X") input_data.as_ptr(),
-            lateout("X") _,
+            inout("X") input_data.as_ptr() => _,
 
-            options(preserves_flags)
+            // TODO: restore options(preserves_flags)
         );
     }
 }

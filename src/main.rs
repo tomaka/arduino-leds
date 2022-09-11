@@ -54,7 +54,7 @@ pub extern "C" fn main() {
 
     // Buffer to collect the LED data in. Must be large enough to fit all the data of each LED
     // strip at once, otherwise the sending timing will not work.
-    let mut data_buffer = [0; 512];
+    let mut data_buffer = [0; 500];
 
     loop {
         let clock_value = unsafe {
@@ -100,8 +100,8 @@ pub extern "C" fn main() {
 
         hal::upload_bport_data::<0>(&data_buffer[..data_size]);
 
-        // TODO: don't wait 50µs always
-        ruduino::delay::delay_us(280);
+        // TODO: don't wait always
+        ruduino::delay::delay_us(300);
     }
 }
 
