@@ -1,4 +1,4 @@
-use core::{iter, time::Duration};
+use core::{cmp, iter, time::Duration};
 
 const WEST_LEDS: usize = 22;
 const NORTH_LEDS: usize = 62;
@@ -15,6 +15,43 @@ pub enum Mode {
 pub enum Strip {
     NorthWest,
     SouthEast,
+}
+
+pub fn led_colors_lerp(
+    mode1: Mode,
+    mode2: Mode,
+    since_mode_change: Duration,
+    clock_value: Duration,
+    strip: Strip,
+) -> impl Iterator<Item = [u8; 3]> {
+    const LERP_DURATION_MS: u32 = 1000;
+
+    let mode2_weight = u8::try_from(cmp::min(
+        u32::try_from(since_mode_change.as_millis())
+            .unwrap_or(u32::max_value())
+            .saturating_mul(LERP_DURATION_MS)
+            / 1000,
+        255,
+    ))
+    .unwrap();
+    let mode1_weight = 255 - mode2_weight;
+
+    let colors1 = led_colors(mode1, clock_value, strip);
+    let colors2 = led_colors(mode2, clock_value, strip);
+
+    colors1.zip(colors2).map(move |(c1, c2)| {
+        fn avg(a: u8, b: u8, b_weight: u8) -> u8 {
+            // TODO: not correct, as the weight would need to be 256
+            let res = u16::from(a)
+                * u16::from(255 - b_weight).saturating_add(u16::from(b) * u16::from(b_weight));
+            u8::try_from(res >> 8).unwrap()
+        }
+        [
+            avg(c1[0], c2[0], mode2_weight),
+            avg(c1[1], c2[1], mode2_weight),
+            avg(c1[2], c2[2], mode2_weight),
+        ]
+    })
 }
 
 pub fn led_colors(
