@@ -34,7 +34,6 @@ pub fn led_colors_lerp(
         255,
     ))
     .unwrap();
-    let mode1_weight = 255 - mode2_weight;
 
     let colors1 = led_colors(mode1, clock_value, strip);
     let colors2 = led_colors(mode2, clock_value, strip);

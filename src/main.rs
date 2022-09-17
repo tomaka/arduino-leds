@@ -70,7 +70,9 @@ pub extern "C" fn main() {
             core::arch::asm!(r#"lds {out}, 0x46"#, out = out(reg) subtimer);
             core::arch::asm!(r#"sts 0x5f, {sreg}"#, sreg = in(reg) sreg);
 
-            Duration::from_nanos(u64::from(num_timer0_overflows) * 1024 * 6250 / 100)
+            Duration::from_nanos(
+                (u64::from(num_timer0_overflows) * 1024 + u64::from(subtimer) * 64) * 6250 / 100,
+            )
         };
 
         for strip in [leds::Strip::NorthWest, leds::Strip::SouthEast] {
