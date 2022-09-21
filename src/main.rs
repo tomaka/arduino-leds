@@ -70,7 +70,7 @@ pub extern "C" fn main() {
             core::arch::asm!(r#"lds {out}, 0x46"#, out = out(reg) subtimer);
             core::arch::asm!(r#"sts 0x5f, {sreg}"#, sreg = in(reg) sreg);
 
-            Duration::from_nanos(
+            Duration::from_micros(
                 (u64::from(num_timer0_overflows) * 1024 + u64::from(subtimer) * 64) * 6250 / 100,
             )
         };
@@ -105,7 +105,7 @@ pub extern "C" fn main() {
         }
 
         // TODO: don't wait the full duration
-        ruduino::delay::delay_us(300);
+        ruduino::delay::delay_us(100);
     }
 }
 

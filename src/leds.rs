@@ -144,12 +144,65 @@ fn west_to_east_gradiant_modifier_se(
     })
 }
 
+fn random_waves_modifier(
+    clock_value: Duration,
+    iter: impl Iterator<Item = [u8; 3]>,
+) -> impl Iterator<Item = [u8; 3]> {
+    // TODO: dummy
+    iter.map(move |n| n)
+}
+
+fn cursor_add_nw(
+    clock_value: Duration,
+    iter: impl Iterator<Item = [u8; 3]>,
+) -> impl Iterator<Item = [u8; 3]> {
+    let cursor_pos = (((clock_value.as_millis() / 500) as u32)
+        % u32::try_from(WEST_LEDS + NORTH_LEDS + EAST_LEDS + SOUTH_LEDS).unwrap())
+        as u16;
+    iter.enumerate().map(move |(pos, value)| {
+        if pos == usize::from(cursor_pos) {
+            [255, 0, 0]
+        } else {
+            value
+        }
+    })
+}
+
+fn cursor_add_se(
+    clock_value: Duration,
+    iter: impl Iterator<Item = [u8; 3]>,
+) -> impl Iterator<Item = [u8; 3]> {
+    let cursor_pos = (((clock_value.as_millis() / 500) as u32)
+        % u32::try_from(WEST_LEDS + NORTH_LEDS + EAST_LEDS + SOUTH_LEDS).unwrap())
+        as u16;
+    let cursor_pos_adj = cursor_pos
+        .checked_sub((WEST_LEDS + NORTH_LEDS) as u16)
+        .map(|n| (SOUTH_LEDS + EAST_LEDS) as u16 - n)
+        .unwrap_or(u16::max_value());
+    iter.enumerate().map(move |(pos, value)| {
+        if pos == usize::from(cursor_pos_adj) {
+            [255, 0, 0]
+        } else {
+            value
+        }
+    })
+}
+
 fn test_mode_colors_nw(clock_value: Duration) -> impl Iterator<Item = [u8; 3]> {
-    west_to_east_gradiant_modifier_nw(iter::repeat([128, 64, 0]).take(NORTH_LEDS + WEST_LEDS))
+    cursor_add_nw(
+        clock_value,
+        west_to_east_gradiant_modifier_nw(random_waves_modifier(
+            clock_value,
+            iter::repeat([128, 64, 0]).take(NORTH_LEDS + WEST_LEDS),
+        )),
+    )
 }
 
 fn test_mode_colors_se(clock_value: Duration) -> impl Iterator<Item = [u8; 3]> {
-    west_to_east_gradiant_modifier_se(iter::repeat([128, 64, 0]).take(SOUTH_LEDS + EAST_LEDS))
+    cursor_add_se(
+        clock_value,
+        west_to_east_gradiant_modifier_se(iter::repeat([128, 64, 0]).take(SOUTH_LEDS + EAST_LEDS)),
+    )
 }
 
 fn off_mode_colors_nw() -> impl Iterator<Item = [u8; 3]> {
