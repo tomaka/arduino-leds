@@ -94,10 +94,25 @@ pub fn led_colors(
     }
 
     match (mode, strip) {
-        (Mode::Off, Strip::NorthWest) => ModeIter::OffNw(off_mode_colors_nw()),
-        (Mode::Off, Strip::SouthEast) => ModeIter::OffSe(off_mode_colors_se()),
-        (Mode::Test, Strip::NorthWest) => ModeIter::TestNw(test_mode_colors_nw(clock_value)),
-        (Mode::Test, Strip::SouthEast) => ModeIter::TestSe(test_mode_colors_se(clock_value)),
+        (Mode::Off, Strip::NorthWest) => {
+            ModeIter::OffNw(iter::repeat([0, 0, 0]).take(NORTH_LEDS + WEST_LEDS))
+        }
+        (Mode::Off, Strip::SouthEast) => {
+            ModeIter::OffSe(iter::repeat([0, 0, 0]).take(SOUTH_LEDS + EAST_LEDS))
+        }
+        (Mode::Test, Strip::NorthWest) => ModeIter::TestNw(cursor_add_nw(
+            clock_value,
+            west_to_east_gradiant_modifier_nw(random_waves_modifier(
+                clock_value,
+                iter::repeat([128, 64, 0]).take(NORTH_LEDS + WEST_LEDS),
+            )),
+        )),
+        (Mode::Test, Strip::SouthEast) => ModeIter::TestSe(cursor_add_se(
+            clock_value,
+            west_to_east_gradiant_modifier_se(
+                iter::repeat([128, 64, 0]).take(SOUTH_LEDS + EAST_LEDS),
+            ),
+        )),
     }
 }
 
@@ -186,29 +201,4 @@ fn cursor_add_se(
             value
         }
     })
-}
-
-fn test_mode_colors_nw(clock_value: Duration) -> impl Iterator<Item = [u8; 3]> {
-    cursor_add_nw(
-        clock_value,
-        west_to_east_gradiant_modifier_nw(random_waves_modifier(
-            clock_value,
-            iter::repeat([128, 64, 0]).take(NORTH_LEDS + WEST_LEDS),
-        )),
-    )
-}
-
-fn test_mode_colors_se(clock_value: Duration) -> impl Iterator<Item = [u8; 3]> {
-    cursor_add_se(
-        clock_value,
-        west_to_east_gradiant_modifier_se(iter::repeat([128, 64, 0]).take(SOUTH_LEDS + EAST_LEDS)),
-    )
-}
-
-fn off_mode_colors_nw() -> impl Iterator<Item = [u8; 3]> {
-    iter::repeat([0, 0, 0]).take(NORTH_LEDS + WEST_LEDS)
-}
-
-fn off_mode_colors_se() -> impl Iterator<Item = [u8; 3]> {
-    iter::repeat([0, 0, 0]).take(SOUTH_LEDS + EAST_LEDS)
 }
