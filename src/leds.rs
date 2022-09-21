@@ -101,27 +101,55 @@ pub fn led_colors(
     }
 }
 
+fn west_to_east_gradiant_modifier_nw(
+    iter: impl Iterator<Item = [u8; 3]>,
+) -> impl Iterator<Item = [u8; 3]> {
+    let mut n = 0;
+    iter.map(move |item| {
+        let intensity = if n < WEST_LEDS {
+            16
+        } else {
+            16 + (256 - 16) * u16::try_from(n - WEST_LEDS).unwrap()
+                / u16::try_from(NORTH_LEDS).unwrap()
+        };
+
+        n += 1;
+
+        [
+            (intensity * u16::from(item[0]) / 256) as u8,
+            (intensity * u16::from(item[1]) / 256) as u8,
+            (intensity * u16::from(item[2]) / 256) as u8,
+        ]
+    })
+}
+
+fn west_to_east_gradiant_modifier_se(
+    iter: impl Iterator<Item = [u8; 3]>,
+) -> impl Iterator<Item = [u8; 3]> {
+    let mut n = 0;
+    iter.map(move |item| {
+        let intensity = if n < SOUTH_LEDS {
+            16 + (256 - 16) * u16::try_from(n).unwrap() / u16::try_from(SOUTH_LEDS).unwrap()
+        } else {
+            256
+        };
+
+        n += 1;
+
+        [
+            (intensity * u16::from(item[0]) / 256) as u8,
+            (intensity * u16::from(item[1]) / 256) as u8,
+            (intensity * u16::from(item[2]) / 256) as u8,
+        ]
+    })
+}
+
 fn test_mode_colors_nw(clock_value: Duration) -> impl Iterator<Item = [u8; 3]> {
-    let mut n = 0u8;
-    iter::repeat([0, 0, 0]).take(WEST_LEDS).chain(
-        iter::from_fn(move || {
-            n += 1;
-            let intensity = (128 * u16::from(n) / u16::try_from(NORTH_LEDS).unwrap()) as u8;
-            Some([intensity, intensity / 2, 0])
-        })
-        .take(NORTH_LEDS),
-    )
+    west_to_east_gradiant_modifier_nw(iter::repeat([128, 64, 0]).take(NORTH_LEDS + WEST_LEDS))
 }
 
 fn test_mode_colors_se(clock_value: Duration) -> impl Iterator<Item = [u8; 3]> {
-    let mut n = 0u8;
-    iter::from_fn(move || {
-        n += 1;
-        let intensity = (128 * u16::from(n) / u16::try_from(SOUTH_LEDS).unwrap()) as u8;
-        Some([intensity, intensity / 2, 0])
-    })
-    .take(SOUTH_LEDS)
-    .chain(iter::repeat([128, 64, 0]).take(EAST_LEDS))
+    west_to_east_gradiant_modifier_se(iter::repeat([128, 64, 0]).take(SOUTH_LEDS + EAST_LEDS))
 }
 
 fn off_mode_colors_nw() -> impl Iterator<Item = [u8; 3]> {
