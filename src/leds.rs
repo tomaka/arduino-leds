@@ -102,15 +102,17 @@ pub fn led_colors(
         }
         (Mode::Test, Strip::NorthWest) => ModeIter::TestNw(cursor_add_nw(
             clock_value,
+            [128, 64, 0],
             west_to_east_gradiant_modifier_nw(random_waves_modifier(
                 clock_value,
-                iter::repeat([128, 64, 0]).take(NORTH_LEDS + WEST_LEDS),
+                iter::repeat([108, 50, 0]).take(NORTH_LEDS + WEST_LEDS),
             )),
         )),
         (Mode::Test, Strip::SouthEast) => ModeIter::TestSe(cursor_add_se(
             clock_value,
+            [128, 64, 0],
             west_to_east_gradiant_modifier_se(
-                iter::repeat([128, 64, 0]).take(SOUTH_LEDS + EAST_LEDS),
+                iter::repeat([108, 50, 0]).take(SOUTH_LEDS + EAST_LEDS),
             ),
         )),
     }
@@ -169,6 +171,7 @@ fn random_waves_modifier(
 
 fn cursor_add_nw(
     clock_value: Duration,
+    cursor_color: [u8; 3],
     iter: impl Iterator<Item = [u8; 3]>,
 ) -> impl Iterator<Item = [u8; 3]> {
     let cursor_pos = (((clock_value.as_millis() / 500) as u32)
@@ -176,7 +179,7 @@ fn cursor_add_nw(
         as u16;
     iter.enumerate().map(move |(pos, value)| {
         if pos == usize::from(cursor_pos) {
-            [255, 0, 0]
+            cursor_color
         } else {
             value
         }
@@ -185,6 +188,7 @@ fn cursor_add_nw(
 
 fn cursor_add_se(
     clock_value: Duration,
+    cursor_color: [u8; 3],
     iter: impl Iterator<Item = [u8; 3]>,
 ) -> impl Iterator<Item = [u8; 3]> {
     let cursor_pos = (((clock_value.as_millis() / 500) as u32)
@@ -196,7 +200,7 @@ fn cursor_add_se(
         .unwrap_or(u16::max_value());
     iter.enumerate().map(move |(pos, value)| {
         if pos == usize::from(cursor_pos_adj) {
-            [255, 0, 0]
+            cursor_color
         } else {
             value
         }
