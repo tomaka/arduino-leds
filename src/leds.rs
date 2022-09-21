@@ -103,7 +103,7 @@ pub fn led_colors(
 
 fn test_mode_colors_nw(clock_value: Duration) -> impl Iterator<Item = [u8; 3]> {
     let mut n = 0u8;
-    iter::repeat([128, 128, 0]).take(EAST_LEDS).chain(
+    iter::repeat([0, 0, 0]).take(WEST_LEDS).chain(
         iter::from_fn(move || {
             n += 1;
             let intensity = (128 * u16::from(n) / u16::try_from(NORTH_LEDS).unwrap()) as u8;
@@ -121,7 +121,7 @@ fn test_mode_colors_se(clock_value: Duration) -> impl Iterator<Item = [u8; 3]> {
         Some([intensity, intensity / 2, 0])
     })
     .take(SOUTH_LEDS)
-    .chain(iter::repeat([0, 0, 0]).take(EAST_LEDS))
+    .chain(iter::repeat([128, 64, 0]).take(EAST_LEDS))
 }
 
 fn off_mode_colors_nw() -> impl Iterator<Item = [u8; 3]> {

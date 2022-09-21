@@ -76,18 +76,13 @@ pub extern "C" fn main() {
         };
 
         for strip in [leds::Strip::NorthWest, leds::Strip::SouthEast] {
-            let mut iter = leds::led_colors_lerp(
-                leds::Mode::Off,
-                leds::Mode::Test,
-                clock_value,
-                clock_value,
-                strip,
-            )
-            .flat_map(|c| {
-                // For some reason, the LED strip shows green as blue and vice versa, so we swap bytes.
-                [c[0], c[2], c[1]].into_iter()
-            })
-            .fuse();
+            // TODO: use lerp
+            let mut iter = leds::led_colors(leds::Mode::Test, clock_value, strip)
+                .flat_map(|c| {
+                    // For some reason, the LED strip shows green as blue and vice versa, so we swap bytes.
+                    [c[0], c[2], c[1]].into_iter()
+                })
+                .fuse();
 
             let mut data_size = 0usize;
             let mut data_buffer_iter = data_buffer.iter_mut();
@@ -104,8 +99,8 @@ pub extern "C" fn main() {
             }
 
             match strip {
-                leds::Strip::NorthWest => hal::upload_bport_data::<0>(&data_buffer[..data_size]),
-                leds::Strip::SouthEast => hal::upload_bport_data::<1>(&data_buffer[..data_size]),
+                leds::Strip::NorthWest => hal::upload_bport_data::<1>(&data_buffer[..data_size]),
+                leds::Strip::SouthEast => hal::upload_bport_data::<0>(&data_buffer[..data_size]),
             }
         }
 
