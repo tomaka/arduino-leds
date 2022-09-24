@@ -100,13 +100,14 @@ pub fn led_colors(
         (Mode::Off, Strip::SouthEast) => {
             ModeIter::OffSe(iter::repeat([0, 0, 0]).take(SOUTH_LEDS + EAST_LEDS))
         }
-        (Mode::Test, Strip::NorthWest) => ModeIter::TestNw(cursor_add_nw(
-            clock_value,
-            [255, 0, 0],
-            wave_modifier_nw(1, iter::repeat([108, 50, 0]).take(NORTH_LEDS + WEST_LEDS)),
+        (Mode::Test, Strip::NorthWest) => ModeIter::TestNw(wave_modifier_nw(
+            10,
+            (((clock_value.as_millis() as u32) / 200) & 0xff) as u8,
+            iter::repeat([108, 50, 0]).take(NORTH_LEDS + WEST_LEDS),
         )),
         (Mode::Test, Strip::SouthEast) => ModeIter::TestSe(wave_modifier_se(
-            1,
+            10,
+            (((clock_value.as_millis() as u32) / 200) & 0xff) as u8,
             iter::repeat([108, 50, 0]).take(SOUTH_LEDS + EAST_LEDS),
         )),
     }
@@ -155,32 +156,16 @@ fn west_to_east_gradiant_modifier_se(
     })
 }
 
-fn random_waves_modifier(
-    clock_value: Duration,
-    iter: impl Iterator<Item = [u8; 3]>,
-) -> impl Iterator<Item = [u8; 3]> {
-    // TODO: dummy
-    const NUM: i16 = 2;
-    const DENOM: i16 = 5;
-
-    iter.enumerate().map(move |(idx, val)| {
-        let sin_value = i16::from(sin_approx(((idx * 8) & 0xff) as u8));
-        let map = move |n| {
-            ((i16::from(n) * (DENOM - NUM)) / DENOM + NUM * i16::from(n) * sin_value / (DENOM * 64))
-                as u8
-        };
-        [map(val[0]), map(val[1]), map(val[2])]
-    })
-}
-
 fn wave_modifier_nw(
     num_periods: u16,
+    angle_add: u8,
     iter: impl Iterator<Item = [u8; 3]>,
 ) -> impl Iterator<Item = [u8; 3]> {
     iter.enumerate().map(move |(idx, val)| {
-        let led_pos = idx as u16;
-        let angle =
-            num_periods * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u16;
+        let led_pos = idx as u32;
+        let angle = u32::from(angle_add)
+            + u32::from(num_periods) * 256 * led_pos
+                / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32;
         let sin_value = i16::from(sin_approx((angle & 0xff) as u8));
         let map = move |n| (i16::from(n) * (sin_value + 64) / 128) as u8;
         [map(val[0]), map(val[1]), map(val[2])]
@@ -189,13 +174,15 @@ fn wave_modifier_nw(
 
 fn wave_modifier_se(
     num_periods: u16,
+    angle_add: u8,
     iter: impl Iterator<Item = [u8; 3]>,
 ) -> impl Iterator<Item = [u8; 3]> {
     iter.enumerate().map(move |(idx, val)| {
         let led_pos =
-            ((SOUTH_LEDS + EAST_LEDS) as u16 - idx as u16) + (NORTH_LEDS + WEST_LEDS) as u16;
-        let angle =
-            num_periods * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u16;
+            ((SOUTH_LEDS + EAST_LEDS) as u32 - idx as u32) + (NORTH_LEDS + WEST_LEDS) as u32;
+        let angle = u32::from(angle_add)
+            + u32::from(num_periods) * 256 * led_pos
+                / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32;
         let sin_value = i16::from(sin_approx((angle & 0xff) as u8));
         let map = move |n| (i16::from(n) * (sin_value + 64) / 128) as u8;
         [map(val[0]), map(val[1]), map(val[2])]
