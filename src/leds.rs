@@ -98,14 +98,12 @@ pub fn led_colors(
         (Mode::Off, Strip::SouthEast) => {
             ModeIter::OffSe(iter::repeat([0, 0, 0]).take(SOUTH_LEDS + EAST_LEDS))
         }
-        (Mode::Test, Strip::NorthWest) => ModeIter::TestNw(wave_modifier_nw(
-            10,
-            (((clock_value.as_millis() as u32) / 200) & 0xff) as u8,
+        (Mode::Test, Strip::NorthWest) => ModeIter::TestNw(seemingly_random_vibration_nw(
+            clock_value,
             iter::repeat([108, 50, 0]).take(NORTH_LEDS + WEST_LEDS),
         )),
-        (Mode::Test, Strip::SouthEast) => ModeIter::TestSe(wave_modifier_se(
-            10,
-            (((clock_value.as_millis() as u32) / 200) & 0xff) as u8,
+        (Mode::Test, Strip::SouthEast) => ModeIter::TestSe(seemingly_random_vibration_se(
+            clock_value,
             iter::repeat([108, 50, 0]).take(SOUTH_LEDS + EAST_LEDS),
         )),
     }
@@ -151,6 +149,71 @@ fn west_to_east_gradiant_modifier_se(
             (intensity * u16::from(item[1]) / 256) as u8,
             (intensity * u16::from(item[2]) / 256) as u8,
         ]
+    })
+}
+
+fn seemingly_random_vibration_nw(
+    clock_value: Duration,
+    iter: impl Iterator<Item = [u8; 3]>,
+) -> impl Iterator<Item = [u8; 3]> {
+    let wave1_add = (((clock_value.as_millis() as u32) / 600) & 0xff) as u8;
+    let wave2_add = (((clock_value.as_millis() as u32) / 3000) & 0xff) as u8;
+    let wave3_add = (((clock_value.as_millis() as u32) / 2100) & 0xff) as u8;
+    let wave4_add = (((clock_value.as_millis() as u32) / 2200) & 0xff) as u8;
+
+    iter.enumerate().map(move |(idx, val)| {
+        let led_pos = idx as u32;
+        let angle1 = u32::from(wave1_add)
+            + 5 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32;
+        let sin_value1 = i16::from(sin_approx((angle1 & 0xff) as u8));
+        let angle2 = 3 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32
+            - u32::from(wave2_add);
+        let sin_value2 = i16::from(sin_approx((angle2 & 0xff) as u8));
+        let angle3 = u32::from(wave3_add)
+            + 7 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32;
+        let sin_value3 = i16::from(sin_approx((angle3 & 0xff) as u8));
+        let angle4 = 11 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32
+            - u32::from(wave4_add);
+        let sin_value4 = i16::from(sin_approx((angle4 & 0xff) as u8));
+        let sin_value = cmp::min(
+            64,
+            cmp::max(-64, sin_value1 + sin_value2 + sin_value3 + sin_value4),
+        );
+        let map = move |n| (i16::from(n) * (sin_value + 64) / 128) as u8;
+        [map(val[0]), map(val[1]), map(val[2])]
+    })
+}
+
+fn seemingly_random_vibration_se(
+    clock_value: Duration,
+    iter: impl Iterator<Item = [u8; 3]>,
+) -> impl Iterator<Item = [u8; 3]> {
+    let wave1_add = (((clock_value.as_millis() as u32) / 600) & 0xff) as u8;
+    let wave2_add = (((clock_value.as_millis() as u32) / 3000) & 0xff) as u8;
+    let wave3_add = (((clock_value.as_millis() as u32) / 2100) & 0xff) as u8;
+    let wave4_add = (((clock_value.as_millis() as u32) / 2200) & 0xff) as u8;
+
+    iter.enumerate().map(move |(idx, val)| {
+        let led_pos =
+            ((SOUTH_LEDS + EAST_LEDS) as u32 - idx as u32) + (NORTH_LEDS + WEST_LEDS) as u32;
+        let angle1 = u32::from(wave1_add)
+            + 5 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32;
+        let sin_value1 = i16::from(sin_approx((angle1 & 0xff) as u8));
+        let angle2 = 3 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32
+            - u32::from(wave2_add);
+        let sin_value2 = i16::from(sin_approx((angle2 & 0xff) as u8));
+        let angle3 = u32::from(wave3_add)
+            + 7 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32;
+        let sin_value3 = i16::from(sin_approx((angle3 & 0xff) as u8));
+        let angle4 = 11 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32
+            - u32::from(wave4_add);
+        let sin_value4 = i16::from(sin_approx((angle4 & 0xff) as u8));
+        let sin_value = cmp::min(
+            64,
+            cmp::max(-64, sin_value1 + sin_value2 + sin_value3 + sin_value4),
+        );
+        let map = move |n| (i16::from(n) * (sin_value + 64) / 128) as u8;
+        [map(val[0]), map(val[1]), map(val[2])]
     })
 }
 
