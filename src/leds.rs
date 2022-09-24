@@ -23,7 +23,7 @@ pub fn led_colors_lerp(
     since_mode_change: Duration,
     clock_value: Duration,
     strip: Strip,
-) -> impl Iterator<Item = [u8; 3]> {
+) -> impl Iterator<Item = [u8; 3]> + Clone {
     const LERP_DURATION_MS: u32 = 1000;
 
     let mode2_weight = u8::try_from(cmp::min(
@@ -55,7 +55,8 @@ pub fn led_colors(
     mode: Mode,
     clock_value: Duration,
     strip: Strip,
-) -> impl Iterator<Item = [u8; 3]> {
+) -> impl Iterator<Item = [u8; 3]> + Clone {
+    #[derive(Clone)]
     enum ModeIter<A, B, C, D> {
         OffNw(A),
         OffSe(B),
@@ -110,8 +111,8 @@ pub fn led_colors(
 }
 
 fn west_to_east_gradiant_modifier_nw(
-    iter: impl Iterator<Item = [u8; 3]>,
-) -> impl Iterator<Item = [u8; 3]> {
+    iter: impl Iterator<Item = [u8; 3]> + Clone,
+) -> impl Iterator<Item = [u8; 3]> + Clone {
     let mut n = 0;
     iter.map(move |item| {
         let intensity = if n < WEST_LEDS {
@@ -132,8 +133,8 @@ fn west_to_east_gradiant_modifier_nw(
 }
 
 fn west_to_east_gradiant_modifier_se(
-    iter: impl Iterator<Item = [u8; 3]>,
-) -> impl Iterator<Item = [u8; 3]> {
+    iter: impl Iterator<Item = [u8; 3]> + Clone,
+) -> impl Iterator<Item = [u8; 3]> + Clone {
     let mut n = 0;
     iter.map(move |item| {
         let intensity = if n < SOUTH_LEDS {
@@ -154,8 +155,8 @@ fn west_to_east_gradiant_modifier_se(
 
 fn seemingly_random_vibration_nw(
     clock_value: Duration,
-    iter: impl Iterator<Item = [u8; 3]>,
-) -> impl Iterator<Item = [u8; 3]> {
+    iter: impl Iterator<Item = [u8; 3]> + Clone,
+) -> impl Iterator<Item = [u8; 3]> + Clone {
     let wave1_add = (((clock_value.as_millis() as u32) / 600) & 0xff) as u8;
     let wave2_add = (((clock_value.as_millis() as u32) / 3000) & 0xff) as u8;
     let wave3_add = (((clock_value.as_millis() as u32) / 2100) & 0xff) as u8;
@@ -186,8 +187,8 @@ fn seemingly_random_vibration_nw(
 
 fn seemingly_random_vibration_se(
     clock_value: Duration,
-    iter: impl Iterator<Item = [u8; 3]>,
-) -> impl Iterator<Item = [u8; 3]> {
+    iter: impl Iterator<Item = [u8; 3]> + Clone,
+) -> impl Iterator<Item = [u8; 3]> + Clone {
     let wave1_add = (((clock_value.as_millis() as u32) / 600) & 0xff) as u8;
     let wave2_add = (((clock_value.as_millis() as u32) / 3000) & 0xff) as u8;
     let wave3_add = (((clock_value.as_millis() as u32) / 2100) & 0xff) as u8;
@@ -220,8 +221,8 @@ fn seemingly_random_vibration_se(
 fn wave_modifier_nw(
     num_periods: u16,
     angle_add: u8,
-    iter: impl Iterator<Item = [u8; 3]>,
-) -> impl Iterator<Item = [u8; 3]> {
+    iter: impl Iterator<Item = [u8; 3]> + Clone,
+) -> impl Iterator<Item = [u8; 3]> + Clone {
     iter.enumerate().map(move |(idx, val)| {
         let led_pos = idx as u32;
         let angle = u32::from(angle_add)
@@ -236,8 +237,8 @@ fn wave_modifier_nw(
 fn wave_modifier_se(
     num_periods: u16,
     angle_add: u8,
-    iter: impl Iterator<Item = [u8; 3]>,
-) -> impl Iterator<Item = [u8; 3]> {
+    iter: impl Iterator<Item = [u8; 3]> + Clone,
+) -> impl Iterator<Item = [u8; 3]> + Clone {
     iter.enumerate().map(move |(idx, val)| {
         let led_pos =
             ((SOUTH_LEDS + EAST_LEDS) as u32 - idx as u32) + (NORTH_LEDS + WEST_LEDS) as u32;
@@ -253,8 +254,8 @@ fn wave_modifier_se(
 fn cursor_add_nw(
     clock_value: Duration,
     cursor_color: [u8; 3],
-    iter: impl Iterator<Item = [u8; 3]>,
-) -> impl Iterator<Item = [u8; 3]> {
+    iter: impl Iterator<Item = [u8; 3]> + Clone,
+) -> impl Iterator<Item = [u8; 3]> + Clone {
     let cursor_pos = (((clock_value.as_millis() / 500) as u32)
         % u32::try_from(WEST_LEDS + NORTH_LEDS + EAST_LEDS + SOUTH_LEDS).unwrap())
         as u16;
@@ -270,8 +271,8 @@ fn cursor_add_nw(
 fn cursor_add_se(
     clock_value: Duration,
     cursor_color: [u8; 3],
-    iter: impl Iterator<Item = [u8; 3]>,
-) -> impl Iterator<Item = [u8; 3]> {
+    iter: impl Iterator<Item = [u8; 3]> + Clone,
+) -> impl Iterator<Item = [u8; 3]> + Clone {
     let cursor_pos = (((clock_value.as_millis() / 500) as u32)
         % u32::try_from(WEST_LEDS + NORTH_LEDS + EAST_LEDS + SOUTH_LEDS).unwrap())
         as u16;
