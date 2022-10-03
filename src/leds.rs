@@ -143,6 +143,16 @@ fn west_to_east_gradiant_modifier_se(
     })
 }
 
+// TODO: crashes the led strip?!?! wtf
+fn flashing(
+    clock_value: Duration,
+    iter: impl Iterator<Item = [u8; 3]> + Clone,
+) -> impl Iterator<Item = [u8; 3]> + Clone {
+    // TODO: better calculation
+    let flash = ((clock_value.as_millis() as u32) % 128) < 10;
+    iter.map(move |color| if flash { [255, 255, 255] } else { color })
+}
+
 fn seemingly_random_vibration(
     clock_value: Duration,
     strip: Strip,

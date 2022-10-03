@@ -110,7 +110,7 @@ pub extern "C" fn main() {
         }
 
         // TODO: don't wait the full duration
-        ruduino::delay::delay_us(100);
+        ruduino::delay::delay_us(300);
     }
 }
 
