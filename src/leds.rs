@@ -95,7 +95,7 @@ pub fn led_colors(
         (Mode::Test, strip) => ModeIter::Test(seemingly_random_vibration(
             clock_value,
             strip,
-            iter::repeat([108, 50, 0]).take(NORTH_LEDS + WEST_LEDS),
+            iter::repeat([78, 30, 0]).take(NORTH_LEDS + WEST_LEDS),
         )),
     }
 }
