@@ -114,7 +114,7 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
 
             inout("X") input_data.as_ptr() => _,
 
-            // TODO: restore options(preserves_flags)
+            options(preserves_flags)
         );
     }
 }
