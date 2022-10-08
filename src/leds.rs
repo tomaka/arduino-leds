@@ -152,8 +152,8 @@ fn flashing(
     iter: impl Iterator<Item = [u8; 3]> + Clone,
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
     // TODO: better calculation
-    let flash = ((clock_value.as_millis() as u32) % 128) < 10;
-    iter.map(move |color| if flash { [255, 255, 255] } else { color })
+    let flash = ((clock_value.as_millis() as u32) % 400) < 50;
+    iter.map(move |color| if flash { [color[0].saturating_add(10), color[1].saturating_add(10), color[2].saturating_add(10)] } else { color })
 }
 
 fn seemingly_random_vibration(

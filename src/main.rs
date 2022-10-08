@@ -29,7 +29,7 @@ pub extern "C" fn main() {
     hal::enable_bport_out::<1>();
 
     // Enable the timer0 with a prescaler of 64.
-    // This means that every 64 cycles the clock timer increases by 0. After 16384 cycles
+    // This means that every 64 cycles the clock timer increases by 1. After 16384 cycles
     // (64 * 256), which is 1024µs, the timer overflows and an interrupt is generated. The
     // interrupt handler increases `NUM_TIMER0_OVERFLOWS` by 1.
     unsafe {
@@ -71,7 +71,8 @@ pub extern "C" fn main() {
             core::arch::asm!(r#"sts 0x5f, {sreg}"#, sreg = in(reg) sreg);
 
             Duration::from_micros(
-                (u64::from(num_timer0_overflows) * 1024 + u64::from(subtimer) * 64) * 6250 / 100,
+                u64::from(num_timer0_overflows) * 1024
+                    + u64::from(subtimer) * 64 * 6250 / 100 / 1000,
             )
         };
 
