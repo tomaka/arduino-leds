@@ -16,9 +16,6 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
 
     debug_assert!(input_data.len() <= 256 * 255);
 
-    // TODO: unclear why, but we add +1 to the number of bytes to write to fix a bug
-    let num_bytes = input_data.len() + 1;
-
     unsafe {
         // See <http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf>
 
@@ -81,7 +78,7 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
             2:
                 dec {nbytes_high}       // T= 14 or 15
                 breq 3f                 // T= 15 or 16, jump to the end of no more data
-                ldi {nbytes_low}, 255   // T= 16 or 17, reset nbytes_low
+                ldi {nbytes_low}, 0     // T= 16 or 17, reset nbytes_low
                 ld {tmp}, X+            // T= 17 or 18, load the next byte to write
 
                 sbrc {val}, 7           // T= 18 or 19, skip next instruction if bit 7 of val is clear
@@ -104,8 +101,8 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
             "#,
             addr = const 0x5, pin = const PIN,
 
-            nbytes_low = in(reg) u8::try_from(num_bytes & 0xff).unwrap(),
-            nbytes_high = in(reg) u8::try_from((num_bytes >> 8) & 0xff).unwrap() + 1,
+            nbytes_low = in(reg) u8::try_from(input_data.len() & 0xff).unwrap(),
+            nbytes_high = in(reg) u8::try_from((input_data.len() >> 8) & 0xff).unwrap() + 1,
 
             // Temporary registers.
             nbits = inout(reg) 8u8 => _,

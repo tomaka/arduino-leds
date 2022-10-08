@@ -92,13 +92,16 @@ pub fn led_colors(
         (Mode::Off, Strip::SouthEast) => {
             ModeIter::OffSe(iter::repeat([0, 0, 0]).take(SOUTH_LEDS + EAST_LEDS))
         }
-        (Mode::Test, strip) => ModeIter::Test(seemingly_random_vibration(
+        (Mode::Test, strip) => ModeIter::Test(flashing(
             clock_value,
-            strip,
-            iter::repeat([78, 30, 0]).take(match strip {
-                Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
-                Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
-            }),
+            seemingly_random_vibration(
+                clock_value,
+                strip,
+                iter::repeat([78, 30, 0]).take(match strip {
+                    Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
+                    Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
+                }),
+            ),
         )),
     }
 }
@@ -153,7 +156,17 @@ fn flashing(
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
     // TODO: better calculation
     let flash = ((clock_value.as_millis() as u32) % 400) < 50;
-    iter.map(move |color| if flash { [color[0].saturating_add(10), color[1].saturating_add(10), color[2].saturating_add(10)] } else { color })
+    iter.map(move |color| {
+        if flash {
+            [
+                color[0].saturating_add(10),
+                color[1].saturating_add(10),
+                color[2].saturating_add(10),
+            ]
+        } else {
+            color
+        }
+    })
 }
 
 fn seemingly_random_vibration(
