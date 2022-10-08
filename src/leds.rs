@@ -93,16 +93,13 @@ pub fn led_colors(
         (Mode::Off, Strip::SouthEast) => {
             ModeIter::OffSe(iter::repeat([0, 0, 0]).take(SOUTH_LEDS + EAST_LEDS))
         }
-        (Mode::Test, strip) => ModeIter::Test(flashing(
+        (Mode::Test, strip) => ModeIter::Test(seemingly_random_vibration(
             clock_value,
-            seemingly_random_vibration(
-                clock_value,
-                strip,
-                iter::repeat([78, 30, 0]).take(match strip {
-                    Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
-                    Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
-                }),
-            ),
+            strip,
+            iter::repeat([78, 30, 0]).take(match strip {
+                Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
+                Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
+            }),
         )),
     }
 }
