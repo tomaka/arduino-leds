@@ -182,33 +182,41 @@ fn seemingly_random_vibration(
 
         let angle1 = u32::from(wave1_add)
             + 5 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32;
-        let sin_value1 = i16::from(sin_approx((angle1 & 0xff) as u8));
+        let sin_value1 = i16::from(SIN_TABLE[(angle1 & 0xff) as usize]);
         let angle2 = 3 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32
             - u32::from(wave2_add);
-        let sin_value2 = i16::from(sin_approx((angle2 & 0xff) as u8));
+        let sin_value2 = i16::from(SIN_TABLE[(angle2 & 0xff) as usize]);
         let angle3 = u32::from(wave3_add)
             + 7 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32;
-        let sin_value3 = i16::from(sin_approx((angle3 & 0xff) as u8));
+        let sin_value3 = i16::from(SIN_TABLE[(angle3 & 0xff) as usize]);
         let angle4 = 11 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32
             - u32::from(wave4_add);
-        let sin_value4 = i16::from(sin_approx((angle4 & 0xff) as u8));
+        let sin_value4 = i16::from(SIN_TABLE[(angle4 & 0xff) as usize]);
         let angle5 = 4 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32
             - u32::from(wave5_add);
-        let sin_value5 = i16::from(sin_approx((angle5 & 0xff) as u8));
+        let sin_value5 = i16::from(SIN_TABLE[(angle5 & 0xff) as usize]);
         let angle6 = 10 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32
             - u32::from(wave6_add);
-        let sin_value6 = i16::from(sin_approx((angle6 & 0xff) as u8));
+        let sin_value6 = i16::from(SIN_TABLE[(angle6 & 0xff) as usize]);
         let angle7 = 15 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32
             - u32::from(wave7_add);
-        let sin_value7 = i16::from(sin_approx((angle7 & 0xff) as u8));
+        let sin_value7 = i16::from(SIN_TABLE[(angle7 & 0xff) as usize]);
         let angle8 = 2 * 256 * led_pos / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32
             - u32::from(wave8_add);
-        let sin_value8 = i16::from(sin_approx((angle8 & 0xff) as u8));
+        let sin_value8 = i16::from(SIN_TABLE[(angle8 & 0xff) as usize]);
 
         let sin_value = cmp::min(
             64,
             cmp::max(
-                -64, sin_value1, // TODO: restore the other waves? really slow
+                -64,
+                sin_value1
+                    + sin_value2
+                    + sin_value3
+                    + sin_value4
+                    + sin_value5
+                    + sin_value6
+                    + sin_value7
+                    + sin_value8,
             ),
         );
 
@@ -227,7 +235,7 @@ fn wave_modifier_nw(
         let angle = u32::from(angle_add)
             + u32::from(num_periods) * 256 * led_pos
                 / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32;
-        let sin_value = i16::from(sin_approx((angle & 0xff) as u8));
+        let sin_value = i16::from(SIN_TABLE[(angle & 0xff) as usize]);
         let map = move |n| (i16::from(n) * (sin_value + 64) / 128) as u8;
         [map(val[0]), map(val[1]), map(val[2])]
     })
@@ -244,7 +252,7 @@ fn wave_modifier_se(
         let angle = u32::from(angle_add)
             + u32::from(num_periods) * 256 * led_pos
                 / (NORTH_LEDS + WEST_LEDS + SOUTH_LEDS + EAST_LEDS) as u32;
-        let sin_value = i16::from(sin_approx((angle & 0xff) as u8));
+        let sin_value = i16::from(SIN_TABLE[(angle & 0xff) as usize]);
         let map = move |n| (i16::from(n) * (sin_value + 64) / 128) as u8;
         [map(val[0]), map(val[1]), map(val[2])]
     })
@@ -293,12 +301,12 @@ fn cursor_add_se(
 /// A value of 256 for the angle represents `2pi`.
 ///
 /// This function returns a value between -64 (represents -1) and 64 (represents 1).
-fn sin_approx(angle: u8) -> i8 {
+const fn sin_approx(angle: u8) -> i8 {
     // Baskara I's approximation.
     let (angle, invert) = if angle < 128 {
-        (i32::from(angle), false)
+        (angle as i32, false)
     } else {
-        (i32::from(angle) - 128, true)
+        (angle as i32 - 128, true)
     };
     let angle_times_pi_minus_angle = angle * (128i32 - angle);
     let nominator = 4 * angle_times_pi_minus_angle;
@@ -307,3 +315,28 @@ fn sin_approx(angle: u8) -> i8 {
     let result = (64 * nominator / denominator);
     (if invert { -result } else { result }) as i8
 }
+
+macro_rules! gen_sin_table {
+    ($($n:expr),*) => {
+        const SIN_TABLE: [i8; 256] = [
+            $(sin_approx($n)),*
+        ];
+    };
+}
+
+// TODO: I'm sure there's a better way than to enumerate the numbers?
+gen_sin_table!(
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+    26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49,
+    50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73,
+    74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97,
+    98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116,
+    117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135,
+    136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154,
+    155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173,
+    174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192,
+    193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211,
+    212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230,
+    231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249,
+    250, 251, 252, 253, 254, 255
+);
