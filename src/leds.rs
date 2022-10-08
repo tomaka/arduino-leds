@@ -161,14 +161,14 @@ fn seemingly_random_vibration(
     strip: Strip,
     iter: impl Iterator<Item = [u8; 3]> + Clone,
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
-    let wave1_add = (((clock_value.as_millis() as u32) / 600) & 0xff) as u8;
-    let wave2_add = (((clock_value.as_millis() as u32) / 3000) & 0xff) as u8;
-    let wave3_add = (((clock_value.as_millis() as u32) / 2100) & 0xff) as u8;
-    let wave4_add = (((clock_value.as_millis() as u32) / 2200) & 0xff) as u8;
-    let wave5_add = (((clock_value.as_millis() as u32) / 8000) & 0xff) as u8;
-    let wave6_add = (((clock_value.as_millis() as u32) / 16000) & 0xff) as u8;
-    let wave7_add = (((clock_value.as_millis() as u32) / 18000) & 0xff) as u8;
-    let wave8_add = (((clock_value.as_millis() as u32) / 250000) & 0xff) as u8;
+    let wave1_add = (((clock_value.as_millis() as u32) / 6) & 0xff) as u8;
+    let wave2_add = (((clock_value.as_millis() as u32) / 30) & 0xff) as u8;
+    let wave3_add = (((clock_value.as_millis() as u32) / 21) & 0xff) as u8;
+    let wave4_add = (((clock_value.as_millis() as u32) / 22) & 0xff) as u8;
+    let wave5_add = (((clock_value.as_millis() as u32) / 80) & 0xff) as u8;
+    let wave6_add = (((clock_value.as_millis() as u32) / 160) & 0xff) as u8;
+    let wave7_add = (((clock_value.as_millis() as u32) / 180) & 0xff) as u8;
+    let wave8_add = (((clock_value.as_millis() as u32) / 2500) & 0xff) as u8;
 
     iter.enumerate().map(move |(idx, val)| {
         let led_pos = if matches!(strip, Strip::NorthWest) {
