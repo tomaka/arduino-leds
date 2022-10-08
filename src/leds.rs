@@ -93,51 +93,41 @@ pub fn led_colors(
         (Mode::Off, Strip::SouthEast) => {
             ModeIter::OffSe(iter::repeat([0, 0, 0]).take(SOUTH_LEDS + EAST_LEDS))
         }
-        (Mode::Test, strip) => ModeIter::Test(flashing(
+        (Mode::Test, strip) => ModeIter::Test(seemingly_random_vibration(
             clock_value,
-            seemingly_random_vibration(
-                clock_value,
-                strip,
-                iter::repeat([78, 30, 0]).take(match strip {
-                    Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
-                    Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
-                }),
-            ),
+            strip,
+            iter::repeat([78, 30, 0]).take(match strip {
+                Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
+                Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
+            }),
         )),
     }
 }
 
-fn west_to_east_gradiant_modifier_nw(
+fn west_to_east_gradiant_modifier(
+    strip: Strip,
     iter: impl Iterator<Item = [u8; 3]> + Clone,
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
     let mut n = 0;
     iter.map(move |item| {
-        let intensity = if n < WEST_LEDS {
-            16
+        const MIN_INTENSITY: u16 = 4;
+
+        let intensity = if matches!(strip, Strip::NorthWest) {
+            if n < WEST_LEDS {
+                MIN_INTENSITY
+            } else {
+                MIN_INTENSITY
+                    + (256 - MIN_INTENSITY) * u16::try_from(n - WEST_LEDS).unwrap()
+                        / u16::try_from(NORTH_LEDS).unwrap()
+            }
         } else {
-            16 + (256 - 16) * u16::try_from(n - WEST_LEDS).unwrap()
-                / u16::try_from(NORTH_LEDS).unwrap()
-        };
-
-        n += 1;
-
-        [
-            (intensity * u16::from(item[0]) / 256) as u8,
-            (intensity * u16::from(item[1]) / 256) as u8,
-            (intensity * u16::from(item[2]) / 256) as u8,
-        ]
-    })
-}
-
-fn west_to_east_gradiant_modifier_se(
-    iter: impl Iterator<Item = [u8; 3]> + Clone,
-) -> impl Iterator<Item = [u8; 3]> + Clone {
-    let mut n = 0;
-    iter.map(move |item| {
-        let intensity = if n < SOUTH_LEDS {
-            16 + (256 - 16) * u16::try_from(n).unwrap() / u16::try_from(SOUTH_LEDS).unwrap()
-        } else {
-            256
+            if n < SOUTH_LEDS {
+                MIN_INTENSITY
+                    + (256 - MIN_INTENSITY) * u16::try_from(n).unwrap()
+                        / u16::try_from(SOUTH_LEDS).unwrap()
+            } else {
+                256
+            }
         };
 
         n += 1;
