@@ -264,6 +264,14 @@ fn cursor_add_se(
     })
 }
 
+fn onoff_periodic(
+    clock_value: Duration,
+    iter: impl Iterator<Item = [u8; 3]> + Clone,
+) -> impl Iterator<Item = [u8; 3]> + Clone {
+    let is_on = (clock_value.as_secs() % 6) < 3;
+    iter.map(move |c| if is_on { c } else { [0, 0, 0] })
+}
+
 /// Returns the approximation of `sin(angle)`.
 ///
 /// A value of 256 for the angle represents `2pi`.
