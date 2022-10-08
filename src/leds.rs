@@ -150,12 +150,11 @@ fn west_to_east_gradiant_modifier_se(
     })
 }
 
-// TODO: crashes the led strip?!?! wtf
 fn flashing(
     clock_value: Duration,
     iter: impl Iterator<Item = [u8; 3]> + Clone,
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
-    // TODO: better calculation
+    // TODO: better calculation? quite hard because missing a flash is really bad
     let flash = ((clock_value.as_millis() as u32) % 300) < 40;
     iter.map(move |color| {
         if flash {
@@ -219,9 +218,7 @@ fn seemingly_random_vibration(
         let sin_value = cmp::min(
             64,
             cmp::max(
-                -64,
-                sin_value1
-                // TODO: restore the other waves? really slow
+                -64, sin_value1, // TODO: restore the other waves? really slow
             ),
         );
 
