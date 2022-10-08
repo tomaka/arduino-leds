@@ -52,9 +52,9 @@ pub extern "C" fn main() {
         );
     }
 
-    // Buffer to collect the LED data in. Must be large enough to fit all the data of each LED
-    // strip at once, otherwise the sending timing will not work.
-    let mut data_buffer = [0; 500];
+    // Buffer to collect the LED data in. Must be large enough to fit all the data of all the LED
+    // strips at once, otherwise the sending timing will not work.
+    let mut data_buffer = [0; leds::TOTAL_LEDS * 3];
 
     loop {
         let clock_value = unsafe {
@@ -76,7 +76,12 @@ pub extern "C" fn main() {
             )
         };
 
+        let mut data_size = 0usize;
+        let mut northwest_data_end = 0;
+
         for strip in [leds::Strip::NorthWest, leds::Strip::SouthEast] {
+            northwest_data_end = data_size;
+
             let mut iter = leds::led_colors_lerp(
                 leds::Mode::Off,
                 leds::Mode::Test,
@@ -90,9 +95,7 @@ pub extern "C" fn main() {
             })
             .fuse();
 
-            let mut data_size = 0usize;
-            let mut data_buffer_iter = data_buffer.iter_mut();
-
+            let mut data_buffer_iter = data_buffer[data_size..].iter_mut();
             loop {
                 match (data_buffer_iter.next(), iter.next()) {
                     (Some(o), Some(i)) => {
@@ -103,12 +106,10 @@ pub extern "C" fn main() {
                     _ => break,
                 }
             }
-
-            match strip {
-                leds::Strip::NorthWest => hal::upload_bport_data::<1>(&data_buffer[..data_size]),
-                leds::Strip::SouthEast => hal::upload_bport_data::<0>(&data_buffer[..data_size]),
-            }
         }
+
+        hal::upload_bport_data::<1>(&data_buffer[..northwest_data_end]);
+        hal::upload_bport_data::<0>(&data_buffer[northwest_data_end..data_size]);
 
         // TODO: don't wait the full duration
         ruduino::delay::delay_us(300);

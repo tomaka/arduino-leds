@@ -1,5 +1,6 @@
 use core::{cmp, iter, time::Duration};
 
+pub const TOTAL_LEDS: usize = WEST_LEDS + NORTH_LEDS + SOUTH_LEDS + EAST_LEDS;
 const WEST_LEDS: usize = 22;
 const NORTH_LEDS: usize = 62;
 const SOUTH_LEDS: usize = 64; // Note: it's actually 64.5, as the corner cuts it in half, a bit annoying
@@ -155,13 +156,13 @@ fn flashing(
     iter: impl Iterator<Item = [u8; 3]> + Clone,
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
     // TODO: better calculation
-    let flash = ((clock_value.as_millis() as u32) % 400) < 50;
+    let flash = ((clock_value.as_millis() as u32) % 300) < 40;
     iter.map(move |color| {
         if flash {
             [
-                color[0].saturating_add(10),
-                color[1].saturating_add(10),
-                color[2].saturating_add(10),
+                color[0] + (255 - color[0]) / 15,
+                color[1] + (255 - color[1]) / 15,
+                color[2] + (255 - color[2]) / 15,
             ]
         } else {
             color
@@ -220,13 +221,7 @@ fn seemingly_random_vibration(
             cmp::max(
                 -64,
                 sin_value1
-                    + sin_value2
-                    + sin_value3
-                    + sin_value4
-                    + sin_value5
-                    + sin_value6
-                    + sin_value7
-                    + sin_value8,
+                // TODO: restore the other waves? really slow
             ),
         );
 

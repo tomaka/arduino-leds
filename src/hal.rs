@@ -101,8 +101,8 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
             "#,
             addr = const 0x5, pin = const PIN,
 
-            nbytes_low = in(reg) u8::try_from(input_data.len() & 0xff).unwrap(),
-            nbytes_high = in(reg) u8::try_from((input_data.len() >> 8) & 0xff).unwrap() + 1,
+            nbytes_low = inout(reg) u8::try_from(input_data.len() & 0xff).unwrap() => _,
+            nbytes_high = inout(reg) u8::try_from((input_data.len() >> 8) & 0xff).unwrap() + 1 => _,
 
             // Temporary registers.
             nbits = inout(reg) 8u8 => _,
