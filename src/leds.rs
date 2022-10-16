@@ -96,7 +96,7 @@ pub fn led_colors(
         (Mode::Test, strip) => ModeIter::Test(seemingly_random_vibration(
             clock_value,
             strip,
-            iter::repeat([78, 30, 0]).take(match strip {
+            iter::repeat(slowly_changing_color(clock_value)).take(match strip {
                 Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
                 Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
             }),
@@ -193,6 +193,36 @@ fn seemingly_random_vibration(
         let map = move |n| (i16::from(n) * (sin_value + 64) / 128) as u8;
         [map(val[0]), map(val[1]), map(val[2])]
     })
+}
+
+fn slowly_changing_color(clock_value: Duration) -> [u8; 3] {
+    const COLOR_DURATION: u32 = 60000;
+
+    let colors = [
+        [255, 0, 0],
+        [0, 128, 128],
+        [0, 0, 255],
+        [128, 128, 0],
+        [0, 255, 0],
+        [128, 0, 128],
+    ];
+
+    let step = (clock_value.as_millis() as u32) % (COLOR_DURATION * colors.len() as u32);
+
+    let color_from_idx = (step / COLOR_DURATION) as usize;
+    let color_from = colors[color_from_idx];
+    let color_to_idx = (color_from_idx + 1) % colors.len();
+    let color_to = colors[color_to_idx];
+
+    assert!(COLOR_DURATION < u16::max_value() as u32); // Overflow check.
+    let progress = (((step % COLOR_DURATION) << 16) / COLOR_DURATION) as u32;
+    let one_minus_progress = u16::max_value() as u32 - progress;
+
+    [
+        ((color_from[0] as u32 * one_minus_progress + color_to[0] as u32 * progress) >> 16) as u8,
+        ((color_from[1] as u32 * one_minus_progress + color_to[1] as u32 * progress) >> 16) as u8,
+        ((color_from[2] as u32 * one_minus_progress + color_to[2] as u32 * progress) >> 16) as u8,
+    ]
 }
 
 fn colors_rotation_by_side(
