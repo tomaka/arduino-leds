@@ -57,6 +57,8 @@ pub extern "C" fn main() {
     let mut data_buffer = [0; leds::TOTAL_LEDS * 3];
 
     loop {
+        // TODO: set NUM_TIMER0_OVERFLOWS to 0 while the mode is off, so that we don't ever see the clock overflow
+
         let clock_value = unsafe {
             // In order to grab the clock value without running the risk of a race condition, we
             // need to interrupts. For this reason, this is done directly in assembly code.
