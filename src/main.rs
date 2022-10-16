@@ -143,7 +143,7 @@ pub extern "C" fn main() {
 
 #[no_mangle]
 pub unsafe extern "avr-interrupt" fn __vector_16() {
-    NUM_TIMER0_OVERFLOWS += 1;
+    NUM_TIMER0_OVERFLOWS = NUM_TIMER0_OVERFLOWS.wrapping_add(1);
 }
 
 #[no_mangle]
