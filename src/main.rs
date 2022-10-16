@@ -58,17 +58,42 @@ pub extern "C" fn main() {
 
     loop {
         let clock_value = unsafe {
-            // TODO: ASM blocks a bit hacky
+            // In order to grab the clock value without running the risk of a race condition, we
+            // need to interrupts. For this reason, this is done directly in assembly code.
+
             let sreg: u8;
             let subtimer: u8;
-            let num_timer0_overflows: u32;
+            let num_timer0_overflows_byte0: u8;
+            let num_timer0_overflows_byte1: u8;
+            let num_timer0_overflows_byte2: u8;
+            let num_timer0_overflows_byte3: u8;
+
             core::arch::asm!(r#"
-            lds {out}, 0x5f  // SREG
-            cli
-            "#, out = out(reg) sreg);
-            num_timer0_overflows = NUM_TIMER0_OVERFLOWS;
-            core::arch::asm!(r#"lds {out}, 0x46"#, out = out(reg) subtimer);
-            core::arch::asm!(r#"sts 0x5f, {sreg}"#, sreg = in(reg) sreg);
+                lds {sreg}, 0x5f  // SREG
+                cli
+                lds {subtimer}, 0x46
+                ld {byte0}, X+
+                ld {byte1}, X+
+                ld {byte2}, X+
+                ld {byte3}, X+
+                sts 0x5f, {sreg}
+                "#,
+                sreg = out(reg) _,
+                subtimer = out(reg) subtimer,
+                byte0 = out(reg) num_timer0_overflows_byte0,
+                byte1 = out(reg) num_timer0_overflows_byte1,
+                byte2 = out(reg) num_timer0_overflows_byte2,
+                byte3 = out(reg) num_timer0_overflows_byte3,
+                inout("X") (&NUM_TIMER0_OVERFLOWS) as *const u32 as usize => _,
+                options(preserves_flags, readonly, nostack)
+            );
+
+            let num_timer0_overflows = u32::from_ne_bytes([
+                num_timer0_overflows_byte0,
+                num_timer0_overflows_byte1,
+                num_timer0_overflows_byte2,
+                num_timer0_overflows_byte3,
+            ]);
 
             Duration::from_micros(
                 u64::from(num_timer0_overflows) * 1024
