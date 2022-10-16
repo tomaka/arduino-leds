@@ -195,6 +195,34 @@ fn seemingly_random_vibration(
     })
 }
 
+fn colors_rotation_by_side(
+    clock_value: Duration,
+    strip: Strip,
+) -> impl Iterator<Item = [u8; 3]> + Clone {
+    let side_add = (((clock_value.as_secs() as u32) / 2) & 0xff) as u16;
+
+    (0..).map_while(move |counter| {
+        let side_num = match (counter, strip) {
+            (n, Strip::NorthWest) if n >= NORTH_LEDS + WEST_LEDS => return None,
+            (n, Strip::NorthWest) if n >= WEST_LEDS => 1,
+            (_, Strip::NorthWest) => 0,
+            (n, Strip::SouthEast) if n >= SOUTH_LEDS + EAST_LEDS => return None,
+            (n, Strip::SouthEast) if n >= SOUTH_LEDS => 2,
+            (_, Strip::SouthEast) => 3,
+        };
+
+        let side_num_adjusted = (side_num + side_add) % 4;
+
+        Some(match side_num_adjusted {
+            0 => [255, 0, 0],
+            1 => [128, 0, 128],
+            2 => [0, 0, 255],
+            3 => [0, 255, 0],
+            _ => unreachable!(),
+        })
+    })
+}
+
 fn wave_modifier_nw(
     num_periods: u16,
     angle_add: u8,
