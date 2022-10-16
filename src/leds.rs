@@ -96,12 +96,27 @@ pub fn led_colors(
         (Mode::Test, strip) => ModeIter::Test(seemingly_random_vibration(
             clock_value,
             strip,
-            190,
+            0,
             255,
             iter::repeat([118, 25, 2]).take(match strip {
                 Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
                 Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
             }),
+            |_, intensity| {
+                let color1 = [118, 25, 2];
+                let color2 = [148, 10, 0];
+                [
+                    ((color1[0] as u16 * intensity as u16
+                        + color2[0] as u16 * (255 - intensity) as u16)
+                        / 255) as u8,
+                    ((color1[1] as u16 * intensity as u16
+                        + color2[1] as u16 * (255 - intensity) as u16)
+                        / 255) as u8,
+                    ((color1[2] as u16 * intensity as u16
+                        + color2[2] as u16 * (255 - intensity) as u16)
+                        / 255) as u8,
+                ]
+            },
         )),
     }
 }
@@ -161,12 +176,14 @@ fn flashing(
     })
 }
 
+// TODO: has a weird API now
 fn seemingly_random_vibration(
     clock_value: Duration,
     strip: Strip,
     wave_min_intensity: u8,
     wave_max_intensity: u8,
     iter: impl Iterator<Item = [u8; 3]> + Clone,
+    mut map: impl FnMut([u8; 3], u8) -> [u8; 3] + Clone,
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
     let wave1_add = ((clock_value.as_millis() as u32) / 6) as u32;
     let wave2_add = ((clock_value.as_millis() as u32) / 30) as u32;
@@ -200,10 +217,9 @@ fn seemingly_random_vibration(
         let intensity = ((sin_value + 128) as u16
             * (wave_max_intensity as u16 - wave_min_intensity as u16)
             / 255
-            + wave_min_intensity as u16) as u16;
+            + wave_min_intensity as u16) as u8;
 
-        let map = move |n| ((u16::from(n) * intensity) / 255) as u8;
-        [map(val[0]), map(val[1]), map(val[2])]
+        map(val, intensity)
     })
 }
 
