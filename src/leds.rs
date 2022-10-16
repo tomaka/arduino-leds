@@ -96,6 +96,8 @@ pub fn led_colors(
         (Mode::Test, strip) => ModeIter::Test(seemingly_random_vibration(
             clock_value,
             strip,
+            190,
+            255,
             iter::repeat([78, 30, 0]).take(match strip {
                 Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
                 Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
@@ -162,6 +164,8 @@ fn flashing(
 fn seemingly_random_vibration(
     clock_value: Duration,
     strip: Strip,
+    wave_min_intensity: u8,
+    wave_max_intensity: u8,
     iter: impl Iterator<Item = [u8; 3]> + Clone,
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
     let wave1_add = ((clock_value.as_millis() as u32) / 6) as u32;
@@ -186,11 +190,19 @@ fn seemingly_random_vibration(
         let sin_value4 = i16::from(SIN_TABLE[(angle4 & 0xff) as usize]);
 
         let sin_value = cmp::min(
-            64,
-            cmp::max(-64, sin_value1 + sin_value2 + sin_value3 + sin_value4),
+            128,
+            cmp::max(
+                -128,
+                (sin_value1 + sin_value2 + sin_value3 + sin_value4) * 2,
+            ),
         );
 
-        let map = move |n| (i16::from(n) * (sin_value + 64) / 128) as u8;
+        let intensity = ((sin_value + 128) as u16
+            * (wave_max_intensity as u16 - wave_min_intensity as u16)
+            / 256
+            + wave_min_intensity as u16) as u16;
+
+        let map = move |n| ((u16::from(n) * intensity) >> 8) as u8;
         [map(val[0]), map(val[1]), map(val[2])]
     })
 }
