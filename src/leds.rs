@@ -98,7 +98,7 @@ pub fn led_colors(
             strip,
             190,
             255,
-            iter::repeat([78, 30, 0]).take(match strip {
+            iter::repeat([118, 25, 2]).take(match strip {
                 Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
                 Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
             }),
@@ -190,7 +190,7 @@ fn seemingly_random_vibration(
         let sin_value4 = i16::from(SIN_TABLE[(angle4 & 0xff) as usize]);
 
         let sin_value = cmp::min(
-            128,
+            127,
             cmp::max(
                 -128,
                 (sin_value1 + sin_value2 + sin_value3 + sin_value4) * 2,
@@ -199,10 +199,10 @@ fn seemingly_random_vibration(
 
         let intensity = ((sin_value + 128) as u16
             * (wave_max_intensity as u16 - wave_min_intensity as u16)
-            / 256
+            / 255
             + wave_min_intensity as u16) as u16;
 
-        let map = move |n| ((u16::from(n) * intensity) >> 8) as u8;
+        let map = move |n| ((u16::from(n) * intensity) / 255) as u8;
         [map(val[0]), map(val[1]), map(val[2])]
     })
 }
