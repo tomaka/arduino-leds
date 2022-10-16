@@ -164,10 +164,10 @@ fn seemingly_random_vibration(
     strip: Strip,
     iter: impl Iterator<Item = [u8; 3]> + Clone,
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
-    let wave1_add = (((clock_value.as_millis() as u16) / 6) & 0xff) as u8;
-    let wave2_add = (((clock_value.as_millis() as u16) / 30) & 0xff) as u8;
-    let wave3_add = (((clock_value.as_millis() as u16) / 21) & 0xff) as u8;
-    let wave4_add = (((clock_value.as_millis() as u16) / 22) & 0xff) as u8;
+    let wave1_add = ((clock_value.as_millis() as u32) / 6) as u32;
+    let wave2_add = ((clock_value.as_millis() as u32) / 30) as u32;
+    let wave3_add = ((clock_value.as_millis() as u32) / 21) as u32;
+    let wave4_add = ((clock_value.as_millis() as u32) / 22) as u32;
 
     iter.enumerate().map(move |(idx, val)| {
         let led_pos = if matches!(strip, Strip::NorthWest) {
