@@ -93,13 +93,16 @@ pub fn led_colors(
         (Mode::Off, Strip::SouthEast) => {
             ModeIter::OffSe(iter::repeat([0, 0, 0]).take(SOUTH_LEDS + EAST_LEDS))
         }
-        (Mode::Test, strip) => ModeIter::Test(seemingly_random_vibration(
+        (Mode::Test, strip) => ModeIter::Test(flashing(
             clock_value,
-            strip,
-            iter::repeat([78, 30, 0]).take(match strip {
-                Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
-                Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
-            }),
+            seemingly_random_vibration(
+                clock_value,
+                strip,
+                iter::repeat([78, 30, 0]).take(match strip {
+                    Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
+                    Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
+                }),
+            ),
         )),
     }
 }
@@ -145,13 +148,13 @@ fn flashing(
     iter: impl Iterator<Item = [u8; 3]> + Clone,
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
     // TODO: better calculation? quite hard because missing a flash is really bad
-    let flash = ((clock_value.as_millis() as u32) % 500) < 40;
+    let flash = ((clock_value.as_millis() as u32) % 400) < 60;
     iter.map(move |color| {
         if flash {
             [
-                color[0] + (255 - color[0]) / 30,
-                color[1] + (255 - color[1]) / 30,
-                color[2] + (255 - color[2]) / 30,
+                cmp::max(cmp::min(u16::from(color[0]) * 9 / 4, 255) as u8, 1),
+                cmp::max(cmp::min(u16::from(color[1]) * 9 / 4, 255) as u8, 1),
+                cmp::max(cmp::min(u16::from(color[2]) * 9 / 4, 255) as u8, 1),
             ]
         } else {
             color
