@@ -9,7 +9,7 @@ const EAST_LEDS: usize = 25;
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Mode {
     Off,
-    Test,
+    Fire,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -93,7 +93,7 @@ pub fn led_colors(
         (Mode::Off, Strip::SouthEast) => {
             ModeIter::OffSe(iter::repeat([0, 0, 0]).take(SOUTH_LEDS + EAST_LEDS))
         }
-        (Mode::Test, strip) => ModeIter::Test(seemingly_random_vibration(
+        (Mode::Fire, strip) => ModeIter::Test(seemingly_random_vibration(
             clock_value,
             strip,
             0,
@@ -103,17 +103,18 @@ pub fn led_colors(
                 Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
             }),
             |_, intensity| {
-                let color1 = [118, 25, 2];
-                let color2 = [148, 10, 0];
+                let color1 = [48, 18, 2];
+                let color2 = [240, 25, 0];
+                let intensity = 255 - ONE_MINUS_EXP_MINUS_X_TABLE[(255 - intensity) as usize];
                 [
-                    ((color1[0] as u16 * intensity as u16
-                        + color2[0] as u16 * (255 - intensity) as u16)
+                    ((color1[0] as u16 * (255 - intensity) as u16
+                        + color2[0] as u16 * intensity as u16)
                         / 255) as u8,
-                    ((color1[1] as u16 * intensity as u16
-                        + color2[1] as u16 * (255 - intensity) as u16)
+                    ((color1[1] as u16 * (255 - intensity) as u16
+                        + color2[1] as u16 * intensity as u16)
                         / 255) as u8,
-                    ((color1[2] as u16 * intensity as u16
-                        + color2[2] as u16 * (255 - intensity) as u16)
+                    ((color1[2] as u16 * (255 - intensity) as u16
+                        + color2[2] as u16 * intensity as u16)
                         / 255) as u8,
                 ]
             },
@@ -210,7 +211,7 @@ fn seemingly_random_vibration(
             127,
             cmp::max(
                 -128,
-                (sin_value1 + sin_value2 + sin_value3 + sin_value4) * 2,
+                (sin_value1 + sin_value2 + sin_value3 + sin_value4) / 2,
             ),
         );
 
@@ -358,6 +359,8 @@ fn onoff_periodic(
     iter.map(move |c| if is_on { c } else { [0, 0, 0] })
 }
 
+include!(concat!(env!("OUT_DIR"), "/exp_table.rs"));
+
 /// Returns the approximation of `sin(angle)`.
 ///
 /// A value of 256 for the angle represents `2pi`.
@@ -374,7 +377,7 @@ const fn sin_approx(angle: u8) -> i8 {
     let nominator = 4 * angle_times_pi_minus_angle;
     let denominator = ((5 * 128 * 128) / 4) - angle_times_pi_minus_angle;
     debug_assert!(nominator <= denominator);
-    let result = (64 * nominator / denominator);
+    let result = 64 * nominator / denominator;
     (if invert { -result } else { result }) as i8
 }
 
