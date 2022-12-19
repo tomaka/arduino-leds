@@ -41,8 +41,6 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
                 nop                     // 1 cycle
                 nop
                 nop
-                nop  // TODO: this nop and the one below have been added as a hack, as otherwise things flicker and aren't taken into account in the comments
-                nop
 
                 // T= 5 cycles
                 // Set pin output to 0 if bit 7 of `val` isn't set
