@@ -9,7 +9,7 @@ const EAST_LEDS: usize = 25;
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Mode {
     Off,
-    Fire,
+    Fireplace,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -93,7 +93,7 @@ pub fn led_colors(
         (Mode::Off, Strip::SouthEast) => {
             ModeIter::OffSe(iter::repeat([0, 0, 0]).take(SOUTH_LEDS + EAST_LEDS))
         }
-        (Mode::Fire, strip) => ModeIter::Test(seemingly_random_vibration(
+        (Mode::Fireplace, strip) => ModeIter::Test(seemingly_random_vibration(
             clock_value,
             strip,
             0,

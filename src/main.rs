@@ -111,7 +111,7 @@ pub extern "C" fn main() {
 
             let mut iter = leds::led_colors_lerp(
                 leds::Mode::Off,
-                leds::Mode::Fire,
+                leds::Mode::Fireplace,
                 Duration::from_secs(50), // TODO:
                 clock_value,
                 strip,
