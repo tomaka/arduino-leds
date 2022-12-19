@@ -36,14 +36,20 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
                 ld {val}, X+
 
             0:
-                sbi {addr}, {pin}       // T= 0, set pin output to 1
+                // T= 0, set pin output to 1
+                sbi {addr}, {pin}       // 2 cycles
+                nop                     // 1 cycle
                 nop
                 nop
+                nop  // TODO: this nop and the one below have been added as a hack, as otherwise things flicker and aren't taken into account in the comments
                 nop
 
-                sbrs {val}, 7           // T= 5, skip next instruction if bit 7 of val is set
-                cbi {addr}, {pin}       // set pin output to 0
+                // T= 5 cycles
+                // Set pin output to 0 if bit 7 of `val` isn't set
+                sbrs {val}, 7           // 1 cycle if condition is false (no skip), 2 cycle if true and 1-word instruction is skipped
+                cbi {addr}, {pin}       // 2 cycles
 
+                // T= 7 (if bit 7 of `val` was set) or 8 cycles (if bit 7 of `val` was clear)
                 dec {nbits}             // T= 7 or 8 (depending on whether bit 7 of val was set)
                 breq 1f                 // T= 8 or 9
 
