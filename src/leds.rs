@@ -9,6 +9,7 @@ const EAST_LEDS: usize = 25;
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Mode {
     Off,
+    Neutral,
     Fireplace,
 }
 
@@ -58,14 +59,19 @@ pub fn led_colors(
     strip: Strip,
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
     #[derive(Clone)]
-    enum ModeIter<A, B, C> {
+    enum ModeIter<A, B, C, D> {
         OffNw(A),
         OffSe(B),
-        Test(C),
+        Neutral(C),
+        Fireplace(D),
     }
 
-    impl<A: Iterator<Item = [u8; 3]>, B: Iterator<Item = [u8; 3]>, C: Iterator<Item = [u8; 3]>>
-        Iterator for ModeIter<A, B, C>
+    impl<
+            A: Iterator<Item = [u8; 3]>,
+            B: Iterator<Item = [u8; 3]>,
+            C: Iterator<Item = [u8; 3]>,
+            D: Iterator<Item = [u8; 3]>,
+        > Iterator for ModeIter<A, B, C, D>
     {
         type Item = [u8; 3];
 
@@ -73,7 +79,8 @@ pub fn led_colors(
             match self {
                 ModeIter::OffNw(i) => i.next(),
                 ModeIter::OffSe(i) => i.next(),
-                ModeIter::Test(i) => i.next(),
+                ModeIter::Neutral(i) => i.next(),
+                ModeIter::Fireplace(i) => i.next(),
             }
         }
 
@@ -81,7 +88,8 @@ pub fn led_colors(
             match self {
                 ModeIter::OffNw(i) => i.size_hint(),
                 ModeIter::OffSe(i) => i.size_hint(),
-                ModeIter::Test(i) => i.size_hint(),
+                ModeIter::Neutral(i) => i.size_hint(),
+                ModeIter::Fireplace(i) => i.size_hint(),
             }
         }
     }
@@ -93,7 +101,12 @@ pub fn led_colors(
         (Mode::Off, Strip::SouthEast) => {
             ModeIter::OffSe(iter::repeat([0, 0, 0]).take(SOUTH_LEDS + EAST_LEDS))
         }
-        (Mode::Fireplace, strip) => ModeIter::Test(seemingly_random_vibration(
+        (Mode::Neutral, _) => ModeIter::Neutral(iter::repeat([200, 180, 100]).take(match strip {
+            // TODO: the blue glitches
+            Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
+            Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
+        })),
+        (Mode::Fireplace, strip) => ModeIter::Fireplace(seemingly_random_vibration(
             clock_value,
             strip,
             0,

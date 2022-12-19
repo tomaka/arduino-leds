@@ -6,7 +6,7 @@ pub fn enable_bport_out<const PIN: usize>() {
         core::arch::asm!(
             "sbi {addr}, {pin}",
             addr = const 0x4, pin = const PIN,
-            options(preserves_flags, readonly, nostack)
+            options(preserves_flags, nostack)
         );
     }
 }
@@ -22,6 +22,7 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
 
     unsafe {
         // See <http://ww1.microchip.com/downloads/en/devicedoc/atmel-0856-avr-instruction-set-manual.pdf>
+        // and <https://github.com/rust-lang/rust/blob/263d8682d6e01bb02727b15b1c72ffabc0e7396b/compiler/rustc_target/src/asm/avr.rs>
 
         // To write a 1, we set the bit high for 10 cycles (1125ns) then low for 4 cycles (250ns).
         // To write a 0, we set the bit high for 4 cycles (250ns) then low for 10 cycles (1125ns).
@@ -105,13 +106,13 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
             "#,
             addr = const 0x5, pin = const PIN,
 
-            nbytes_low = inout(reg) u8::try_from(input_data.len() & 0xff).unwrap() => _,
-            nbytes_high = inout(reg) u8::try_from((input_data.len() >> 8) & 0xff).unwrap() + 1 => _,
+            nbytes_low = inout(reg_upper) u8::try_from(input_data.len() & 0xff).unwrap() => _,
+            nbytes_high = inout(reg_upper) u8::try_from((input_data.len() >> 8) & 0xff).unwrap() + 1 => _,
 
             // Temporary registers.
-            nbits = inout(reg) 8u8 => _,
-            tmp = out(reg) _,
-            val = out(reg) _,
+            nbits = inout(reg_upper) 8u8 => _,
+            tmp = out(reg_upper) _,
+            val = out(reg_upper) _,
 
             inout("X") input_data.as_ptr() => _,
 

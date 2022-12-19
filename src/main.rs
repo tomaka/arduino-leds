@@ -107,33 +107,31 @@ pub extern "C" fn main() {
         let mut northwest_data_end = 0;
 
         for strip in [leds::Strip::NorthWest, leds::Strip::SouthEast] {
+            debug_assert_eq!(data_size % 3, 0);
+
             northwest_data_end = data_size;
 
-            let mut iter = leds::led_colors_lerp(
-                leds::Mode::Off,
-                leds::Mode::Fireplace,
-                Duration::from_secs(50), // TODO:
-                clock_value,
-                strip,
-            )
-            .flat_map(|c| {
-                // For some reason, the LED strip shows green as blue and vice versa, so we swap bytes.
-                [c[0], c[2], c[1]].into_iter()
-            })
-            .fuse();
+            let mut iter = leds::led_colors(leds::Mode::Fireplace, clock_value, strip) /*::led_colors_lerp(
+                    leds::Mode::Off,
+                    leds::Mode::Neutral,
+                    Duration::from_secs(50), // TODO:
+                    clock_value,
+                    strip,
+                )*/
+                .flat_map(|c| {
+                    // For some reason, the LED strip shows green as blue and vice versa, so we swap bytes.
+                    [c[0], c[2], c[1]].into_iter()
+                })
+                .fuse();
 
-            let mut data_buffer_iter = data_buffer[data_size..].iter_mut();
-            loop {
-                match (data_buffer_iter.next(), iter.next()) {
-                    (Some(o), Some(i)) => {
-                        *o = i;
-                        data_size += 1;
-                    }
-                    (None, Some(_)) => panic!(), // Note: the buffer must be large enough to hold all the data.
-                    _ => break,
-                }
+            while let Some(byte) = iter.next() {
+                data_buffer[data_size] = byte;
+                data_size += 1;
             }
         }
+
+        debug_assert_eq!(data_size % 3, 0);
+        debug_assert_eq!(northwest_data_end % 3, 0);
 
         hal::upload_bport_data::<1>(&data_buffer[..northwest_data_end]);
         hal::upload_bport_data::<0>(&data_buffer[northwest_data_end..data_size]);
