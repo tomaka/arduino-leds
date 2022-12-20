@@ -47,6 +47,7 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
                 // Set pin output to 0 if bit 7 of `val` isn't set
                 sbrs {val}, 7           // 1 cycle if condition is false (no skip), 2 cycle if true and 1-word instruction is skipped
                 cbi {addr}, {pin}       // 2 cycles
+                // If bit 7 of `val` isn't set, the pin stayed at 1 for 6 cycles (375ns)
 
                 // T= 7 (if bit 7 of `val` was set) or 8 cycles (if bit 7 of `val` was clear)
                 dec {nbits}             // 1 cycle
@@ -69,12 +70,17 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
                 // Either this `cbi` or the one above is executed, but never both
                 sbrc {val}, 7
                 cbi {addr}, {pin}
+                // If bit 7 of `val` is set, the pin stayed at 1 for 19 cycles (1187.5ns)
 
                 // T= 21
                 rol {val}               // 1 cycle
                 nop
+                nop
+                nop
+                nop
+                nop
                 rjmp 0b                 // 2 cycles
-                // We jump back to label `0` at T= 25
+                // We jump back to label `0` at T= 29
 
             1:
                 // We arrive here at T= 10 or 11
@@ -92,33 +98,50 @@ pub fn upload_bport_data<const PIN: usize>(input_data: &[u8]) {
                 nop
                 sbrc {val}, 7
                 cbi {addr}, {pin}
+                // If bit 7 of `val` is set, the pin stayed at 1 for 19 cycles (1187.5ns)
 
                 // T= 21
                 mov {val}, {tmp}        // 1 cycle
                 nop
+                nop
+                nop
+                nop
+                nop
                 rjmp 0b                 // 2 cycles
-                // We jump back to label `0` at T= 25
+                // We jump back to label `0` at T= 29
 
             2:
                 // We arrive here at T= 14 or 15
                 dec {nbytes_high}
                 // Jump to the end if no more data
                 breq 3f
-                ldi {nbytes_low}, 0     // T= 16 or 17, reset nbytes_low
-                ld {tmp}, X+            // T= 17 or 18, load the next byte to write
+                ldi {nbytes_low}, 0     // 1 cycle
+                ld {tmp}, X+            // 1 cycle, although it's kind of complicated
 
                 sbrc {val}, 7           // T= 18 or 19, skip next instruction if bit 7 of val is clear
                 cbi {addr}, {pin}       // set pin output to 0
+                // If bit 7 of `val` is set, the pin stayed at 1 for 19 cycles (1187.5ns)
 
-                mov {val}, {tmp}        // T= 21
+                // T= 21
+                mov {val}, {tmp}
                 nop
-                rjmp 0b                 // T= 23
-                // We jump back to label `0` at T= 25
+                nop
+                nop
+                nop
+                nop
+                rjmp 0b
+                // We jump back to label `0` at T= 29
 
             3:
                 nop
                 nop
                 cbi {addr}, {pin}       // set pin output to 0
+
+                // We add some nops just to make sure that the pin remains at 0 long enough,
+                // which is important for example if the user calls this function twice in a row
+                // with the same port.
+                nop
+                nop
 
                 // Trailer to restore the SREG value.
                 pop {tmp}
