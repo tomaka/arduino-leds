@@ -58,41 +58,35 @@ pub fn led_colors(
     clock_value: Duration,
     strip: Strip,
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
-    #[derive(Clone)]
-    enum ModeIter<A, B, C, D> {
-        OffNw(A),
-        OffSe(B),
-        Neutral(C),
-        Fireplace(D),
+    macro_rules! gen {
+        ($($n:ident),*) => {
+            #[derive(Clone)]
+            enum ModeIter<$($n),*> {
+                $($n($n),)*
+            }
+        
+            impl<
+                    $($n: Iterator<Item = [u8; 3]>,)*
+                > Iterator for ModeIter<$($n),*>
+            {
+                type Item = [u8; 3];
+        
+                fn next(&mut self) -> Option<Self::Item> {
+                    match self {
+                        $(ModeIter::$n(i) => i.next(),)*
+                    }
+                }
+        
+                fn size_hint(&self) -> (usize, Option<usize>) {
+                    match self {
+                        $(ModeIter::$n(i) => i.size_hint(),)*
+                    }
+                }
+            }
+        };
     }
 
-    impl<
-            A: Iterator<Item = [u8; 3]>,
-            B: Iterator<Item = [u8; 3]>,
-            C: Iterator<Item = [u8; 3]>,
-            D: Iterator<Item = [u8; 3]>,
-        > Iterator for ModeIter<A, B, C, D>
-    {
-        type Item = [u8; 3];
-
-        fn next(&mut self) -> Option<Self::Item> {
-            match self {
-                ModeIter::OffNw(i) => i.next(),
-                ModeIter::OffSe(i) => i.next(),
-                ModeIter::Neutral(i) => i.next(),
-                ModeIter::Fireplace(i) => i.next(),
-            }
-        }
-
-        fn size_hint(&self) -> (usize, Option<usize>) {
-            match self {
-                ModeIter::OffNw(i) => i.size_hint(),
-                ModeIter::OffSe(i) => i.size_hint(),
-                ModeIter::Neutral(i) => i.size_hint(),
-                ModeIter::Fireplace(i) => i.size_hint(),
-            }
-        }
-    }
+    gen!(OffNw, OffSe, Fireplace, Neutral);
 
     match (mode, strip) {
         (Mode::Off, Strip::NorthWest) => {
