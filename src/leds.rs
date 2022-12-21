@@ -11,6 +11,7 @@ pub enum Mode {
     Off,
     Neutral,
     Fireplace,
+    SegmentLights,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -64,19 +65,19 @@ pub fn led_colors(
             enum ModeIter<$($n),*> {
                 $($n($n),)*
             }
-        
+
             impl<
                     $($n: Iterator<Item = [u8; 3]>,)*
                 > Iterator for ModeIter<$($n),*>
             {
                 type Item = [u8; 3];
-        
+
                 fn next(&mut self) -> Option<Self::Item> {
                     match self {
                         $(ModeIter::$n(i) => i.next(),)*
                     }
                 }
-        
+
                 fn size_hint(&self) -> (usize, Option<usize>) {
                     match self {
                         $(ModeIter::$n(i) => i.size_hint(),)*
@@ -86,7 +87,7 @@ pub fn led_colors(
         };
     }
 
-    gen!(OffNw, OffSe, Fireplace, Neutral);
+    gen!(OffNw, OffSe, Fireplace, Neutral, SegmentLights);
 
     match (mode, strip) {
         (Mode::Off, Strip::NorthWest) => {
@@ -131,6 +132,42 @@ pub fn led_colors(
                 ]
             },
         )),
+        (Mode::SegmentLights, strip) => {
+            let segment_offset = {
+                let base = (clock_value.as_millis() as u32) / 35;
+                let base = base % 256;
+                if base > 128 {
+                    256 - base
+                } else {
+                    base
+                }
+            };
+
+            let iter = (0u32..).map(move |idx| {
+                let led_pos = if matches!(strip, Strip::NorthWest) {
+                    idx
+                } else {
+                    ((SOUTH_LEDS + EAST_LEDS) as u32 - idx) + (NORTH_LEDS + WEST_LEDS) as u32
+                };
+
+                let segment_num = (led_pos + segment_offset) / 6;
+                match segment_num % 7 {
+                    0 => [255, 0, 0],
+                    1 => [255, 128, 128],
+                    2 => [0, 255, 255],
+                    3 => [255, 255, 0],
+                    4 => [0, 0, 255],
+                    5 => [0, 255, 0],
+                    6 => [255, 0, 255],
+                    _ => unreachable!(),
+                }
+            });
+
+            ModeIter::SegmentLights(iter.take(match strip {
+                Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
+                Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
+            }))
+        }
     }
 }
 

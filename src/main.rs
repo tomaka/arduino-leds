@@ -111,7 +111,7 @@ pub extern "C" fn main() {
 
             northwest_data_end = data_size;
 
-            let mut iter = leds::led_colors(leds::Mode::Fireplace, clock_value, strip) /*::led_colors_lerp(
+            let mut iter = leds::led_colors(leds::Mode::SegmentLights, clock_value, strip) /*::led_colors_lerp(
                     leds::Mode::Off,
                     leds::Mode::Neutral,
                     Duration::from_secs(50), // TODO:
