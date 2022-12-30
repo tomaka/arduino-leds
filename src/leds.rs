@@ -151,18 +151,37 @@ pub fn led_colors(
             },
         )),
         (Mode::WholeStripAlternatingColor, strip) => {
-            let color = match (clock_value.as_secs() as u8) % 7 {
-                0 => [128, 0, 0],
-                1 => [100, 50, 50],
-                2 => [0, 64, 64],
-                3 => [64, 64, 0],
-                4 => [0, 0, 128],
-                5 => [0, 128, 0],
-                6 => [64, 0, 64],
-                _ => unreachable!(),
+            let color = |v| -> [u8; 3] {
+                match v % 7 {
+                    0 => [128, 0, 0],
+                    1 => [100, 50, 50],
+                    2 => [0, 64, 64],
+                    3 => [64, 64, 0],
+                    4 => [0, 0, 128],
+                    5 => [0, 128, 0],
+                    6 => [64, 0, 64],
+                    _ => unreachable!(),
+                }
             };
 
-            ModeIter::WholeStripAlternatingColor(iter::repeat(color).take(match strip {
+            let color1 = color(clock_value.as_secs() as u8);
+            let color2 = color((clock_value.as_secs() as u8).wrapping_add(1));
+            let lerp = ((clock_value.subsec_millis() as u32 * 255) / 1000) as u8;
+
+            // TODO: dry
+            fn avg(a: u8, b: u8, b_weight: u8) -> u8 {
+                let res =
+                    u16::from(a) * u16::from(255 - b_weight) + u16::from(b) * u16::from(b_weight);
+                u8::try_from(res / 255).unwrap()
+            }
+
+            let final_color = [
+                avg(color1[0], color2[0], lerp),
+                avg(color1[1], color2[1], lerp),
+                avg(color1[2], color2[2], lerp),
+            ];
+
+            ModeIter::WholeStripAlternatingColor(iter::repeat(final_color).take(match strip {
                 Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
                 Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
             }))
