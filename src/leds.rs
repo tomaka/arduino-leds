@@ -12,6 +12,8 @@ pub enum Mode {
     Neutral,
     Fireplace,
     SegmentLights,
+    WholeStripAlternatingColor,
+    PartyCycle,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -55,7 +57,7 @@ pub fn led_colors_lerp(
 }
 
 pub fn led_colors(
-    mode: Mode,
+    mut mode: Mode,
     clock_value: Duration,
     strip: Strip,
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
@@ -87,7 +89,22 @@ pub fn led_colors(
         };
     }
 
-    gen!(OffNw, OffSe, Fireplace, Neutral, SegmentLights);
+    gen!(
+        OffNw,
+        OffSe,
+        Fireplace,
+        Neutral,
+        SegmentLights,
+        WholeStripAlternatingColor
+    );
+
+    if matches!(mode, Mode::PartyCycle) {
+        mode = match ((clock_value.as_millis() as u16) / 4780) % 3 {
+            0 => Mode::WholeStripAlternatingColor,
+            1..=2 => Mode::SegmentLights,
+            _ => unreachable!(),
+        }
+    }
 
     match (mode, strip) {
         (Mode::Off, Strip::NorthWest) => {
@@ -106,6 +123,7 @@ pub fn led_colors(
                 Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
             }),
         ),
+        (Mode::PartyCycle, _) => unreachable!(), // Handled above.
         (Mode::Fireplace, strip) => ModeIter::Fireplace(seemingly_random_vibration(
             clock_value,
             strip,
@@ -132,6 +150,23 @@ pub fn led_colors(
                 ]
             },
         )),
+        (Mode::WholeStripAlternatingColor, strip) => {
+            let color = match (clock_value.as_secs() as u8) % 7 {
+                0 => [128, 0, 0],
+                1 => [128, 64, 64],
+                2 => [0, 128, 128],
+                3 => [128, 128, 0],
+                4 => [0, 0, 128],
+                5 => [0, 128, 0],
+                6 => [128, 0, 128],
+                _ => unreachable!(),
+            };
+
+            ModeIter::WholeStripAlternatingColor(iter::repeat(color).take(match strip {
+                Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
+                Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
+            }))
+        }
         (Mode::SegmentLights, strip) => {
             let segment_offset = {
                 let base = (clock_value.as_millis() as u32) / 35;
