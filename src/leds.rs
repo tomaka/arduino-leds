@@ -99,9 +99,9 @@ pub fn led_colors(
     );
 
     if matches!(mode, Mode::PartyCycle) {
-        mode = match ((clock_value.as_millis() as u16) / 4780) % 3 {
+        mode = match ((clock_value.as_millis() as u16) / 4780) % 2 {
             0 => Mode::WholeStripAlternatingColor,
-            1..=2 => Mode::SegmentLights,
+            1 => Mode::SegmentLights,
             _ => unreachable!(),
         }
     }
