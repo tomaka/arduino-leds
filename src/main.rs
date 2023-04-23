@@ -23,10 +23,10 @@ pub extern "C" fn main() {
         core::arch::asm!("sei");
     }
 
-    // Set ports B0 and B1 as output ports.
-    // On the Arduino Uno, they are the ones marked "8" (B0) and "9" (B1) on DIGITAL side.
+    // Set ports B0 and B2 as output ports.
+    // On the Arduino Uno, they are the ones marked "8" (B0) and "10" (B2) on DIGITAL side.
     hal::enable_bport_out::<0>();
-    hal::enable_bport_out::<1>();
+    hal::enable_bport_out::<2>();
 
     // Enable the timer0 with a prescaler of 64.
     // This means that every 64 cycles the clock timer increases by 1. After 16384 cycles
@@ -133,7 +133,7 @@ pub extern "C" fn main() {
         debug_assert_eq!(data_size % 3, 0);
         debug_assert_eq!(northwest_data_end % 3, 0);
 
-        hal::upload_bport_data::<1>(&data_buffer[..northwest_data_end]);
+        hal::upload_bport_data::<2>(&data_buffer[..northwest_data_end]);
         hal::upload_bport_data::<0>(&data_buffer[northwest_data_end..data_size]);
 
         // TODO: don't wait the full duration
