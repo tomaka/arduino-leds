@@ -27,6 +27,8 @@ pub extern "C" fn main() {
     // On the Arduino Uno, they are the ones marked "8" (B0) and "10" (B2) on DIGITAL side.
     hal::enable_bport_out::<0>();
     hal::enable_bport_out::<2>();
+    // Set port B4 as input port. It is marked "12" on DIGITAL side.
+    hal::enable_bport_in::<4>();
 
     // Enable the timer0 with a prescaler of 64.
     // This means that every 64 cycles the clock timer increases by 1. After 16384 cycles
@@ -52,12 +54,33 @@ pub extern "C" fn main() {
         );
     }
 
+    // If `true`, the push button is currently being pressed.
+    let mut button_is_pressed = false;
+
+    // Mode currently being displayed.
+    let mut mode = leds::Mode::Fireplace;
+
     // Buffer to collect the LED data in. Must be large enough to fit all the data of all the LED
     // strips at once, otherwise the sending timing will not work.
     let mut data_buffer = [0; leds::TOTAL_LEDS * 3];
 
     loop {
         // TODO: set NUM_TIMER0_OVERFLOWS to 0 while the mode is off, so that we don't ever see the clock overflow
+
+        match (hal::read_bport::<4>(), button_is_pressed) {
+            (false, true) => button_is_pressed = false,
+            (false, false) | (true, true) => {}
+            (true, false) => {
+                button_is_pressed = true;
+
+                // Mode cycle.
+                mode = match mode {
+                    leds::Mode::Off => leds::Mode::Fireplace,
+                    leds::Mode::Fireplace => leds::Mode::Off,
+                    _ => todo!(),
+                };
+            }
+        }
 
         let clock_value = unsafe {
             // In order to grab the clock value without running the risk of a race condition, we
@@ -111,7 +134,7 @@ pub extern "C" fn main() {
 
             northwest_data_end = data_size;
 
-            let mut iter = leds::led_colors(leds::Mode::Fireplace, clock_value, strip) /*::led_colors_lerp(
+            let mut iter = leds::led_colors(mode, clock_value, strip) /*::led_colors_lerp(
                     leds::Mode::Off,
                     leds::Mode::Neutral,
                     Duration::from_secs(50), // TODO:

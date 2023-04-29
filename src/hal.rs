@@ -1,6 +1,8 @@
 #[cfg(not(target_arch = "avr"))]
 compile_error!("Can only work on AVR");
 
+// See <https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf>
+
 pub fn enable_bport_out<const PIN: usize>() {
     unsafe {
         core::arch::asm!(
@@ -8,6 +10,29 @@ pub fn enable_bport_out<const PIN: usize>() {
             addr = const 0x4, pin = const PIN,
             options(preserves_flags, nostack)
         );
+    }
+}
+
+pub fn enable_bport_in<const PIN: usize>() {
+    unsafe {
+        core::arch::asm!(
+            "cbi {addr}, {pin}",
+            addr = const 0x4, pin = const PIN,
+            options(preserves_flags, nostack)
+        );
+    }
+}
+
+pub fn read_bport<const PIN: usize>() -> bool {
+    unsafe {
+        let out: u8;
+        core::arch::asm!(
+            "lds {out}, {addr}",
+            addr = const 0x23,
+            out = out(reg_upper) out,
+            options(preserves_flags, nostack)
+        );
+        (out & (1 << PIN)) != 0
     }
 }
 
