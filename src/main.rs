@@ -54,8 +54,8 @@ pub extern "C" fn main() {
         );
     }
 
-    // If `true`, the push button is currently being pressed.
-    let mut button_is_pressed = false;
+    // If `Some`, the push button has been pressed since the given clock value.
+    let mut button_is_pressed_since = None::<Duration>;
 
     // Mode currently being displayed.
     let mut mode = leds::Mode::Fireplace;
@@ -66,21 +66,6 @@ pub extern "C" fn main() {
 
     loop {
         // TODO: set NUM_TIMER0_OVERFLOWS to 0 while the mode is off, so that we don't ever see the clock overflow
-
-        match (hal::read_bport::<4>(), button_is_pressed) {
-            (false, true) => button_is_pressed = false,
-            (false, false) | (true, true) => {}
-            (true, false) => {
-                button_is_pressed = true;
-
-                // Mode cycle.
-                mode = match mode {
-                    leds::Mode::Off => leds::Mode::Fireplace,
-                    leds::Mode::Fireplace => leds::Mode::Off,
-                    _ => todo!(),
-                };
-            }
-        }
 
         let clock_value = unsafe {
             // In order to grab the clock value without running the risk of a race condition, we
@@ -125,6 +110,24 @@ pub extern "C" fn main() {
                     + u64::from(subtimer) * 64 * 6250 / 100 / 1000,
             )
         };
+
+        match (hal::read_bport::<4>(), button_is_pressed_since) {
+            (false, Some(_)) => button_is_pressed_since = None,
+            (true, Some(ref v)) if (clock_value - *v).as_millis() >= 2000 => {
+                mode = leds::Mode::Off;
+            }
+            (false, None) | (true, Some(_)) => {}
+            (true, None) => {
+                button_is_pressed_since = Some(clock_value);
+
+                // Mode cycle.
+                mode = match mode {
+                    leds::Mode::Off => leds::Mode::Fireplace,
+                    leds::Mode::Fireplace => leds::Mode::Off,
+                    _ => todo!(),
+                };
+            }
+        }
 
         let mut data_size = 0usize;
         let mut northwest_data_end = 0;
