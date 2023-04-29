@@ -58,7 +58,7 @@ pub extern "C" fn main() {
     let mut button_is_pressed_since = None::<Duration>;
 
     // Mode currently being displayed.
-    let mut mode = leds::Mode::Fireplace;
+    let mut mode = leds::Mode::Neutral;
 
     // Buffer to collect the LED data in. Must be large enough to fit all the data of all the LED
     // strips at once, otherwise the sending timing will not work.
@@ -122,8 +122,11 @@ pub extern "C" fn main() {
 
                 // Mode cycle.
                 mode = match mode {
-                    leds::Mode::Off => leds::Mode::Fireplace,
-                    leds::Mode::Fireplace => leds::Mode::Off,
+                    leds::Mode::Off => leds::Mode::Neutral,
+                    leds::Mode::Neutral => leds::Mode::Fireplace,
+                    leds::Mode::Fireplace => leds::Mode::PartyCycle,
+                    leds::Mode::PartyCycle => leds::Mode::WholeStripAlternatingColor,
+                    leds::Mode::WholeStripAlternatingColor => leds::Mode::Neutral,
                     _ => todo!(),
                 };
             }
