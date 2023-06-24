@@ -58,7 +58,7 @@ pub extern "C" fn main() {
     let mut button_is_pressed_since = None::<Duration>;
 
     // Mode currently being displayed.
-    let mut mode = leds::Mode::Neutral;
+    let mut mode = leds::Mode::Off;
 
     // Buffer to collect the LED data in. Must be large enough to fit all the data of all the LED
     // strips at once, otherwise the sending timing will not work.
@@ -113,7 +113,7 @@ pub extern "C" fn main() {
 
         match (hal::read_bport::<4>(), button_is_pressed_since) {
             (false, Some(_)) => button_is_pressed_since = None,
-            (true, Some(ref v)) if (clock_value - *v).as_millis() >= 2000 => {
+            (true, Some(ref v)) if (clock_value - *v).as_millis() >= 1500 => {
                 mode = leds::Mode::Off;
             }
             (false, None) | (true, Some(_)) => {}
