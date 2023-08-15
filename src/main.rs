@@ -60,6 +60,8 @@ pub extern "C" fn main() {
     // Mode currently being displayed.
     let mut mode = leds::Mode::Off;
 
+    let mut updates_wrapping_counter: u8 = 0;
+
     // Buffer to collect the LED data in. Must be large enough to fit all the data of all the LED
     // strips at once, otherwise the sending timing will not work.
     let mut data_buffer = [0; leds::TOTAL_LEDS * 3];
@@ -140,7 +142,7 @@ pub extern "C" fn main() {
 
             northwest_data_end = data_size;
 
-            let mut iter = leds::led_colors(mode, clock_value, strip) /*::led_colors_lerp(
+            let mut iter = leds::led_colors(mode, clock_value, updates_wrapping_counter, strip) /*::led_colors_lerp(
                     leds::Mode::Off,
                     leds::Mode::Neutral,
                     Duration::from_secs(50), // TODO:
@@ -158,6 +160,8 @@ pub extern "C" fn main() {
                 data_size += 1;
             }
         }
+
+        updates_wrapping_counter = updates_wrapping_counter.wrapping_add(1);
 
         debug_assert_eq!(data_size % 3, 0);
         debug_assert_eq!(northwest_data_end % 3, 0);

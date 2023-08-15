@@ -27,6 +27,7 @@ pub fn led_colors_lerp(
     mode2: Mode,
     since_mode_change: Duration,
     clock_value: Duration,
+    updates_wrapping_counter: u8,
     strip: Strip,
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
     const LERP_DURATION_MS: u32 = 1000;
@@ -40,8 +41,8 @@ pub fn led_colors_lerp(
     ))
     .unwrap();
 
-    let colors1 = led_colors(mode1, clock_value, strip);
-    let colors2 = led_colors(mode2, clock_value, strip);
+    let colors1 = led_colors(mode1, clock_value, updates_wrapping_counter, strip);
+    let colors2 = led_colors(mode2, clock_value, updates_wrapping_counter, strip);
 
     colors1.zip(colors2).map(move |(c1, c2)| {
         fn avg(a: u8, b: u8, b_weight: u8) -> u8 {
@@ -59,6 +60,7 @@ pub fn led_colors_lerp(
 pub fn led_colors(
     mut mode: Mode,
     clock_value: Duration,
+    updates_wrapping_counter: u8,
     strip: Strip,
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
     macro_rules! gen {
@@ -262,11 +264,10 @@ fn west_to_east_gradiant_modifier(
 }
 
 fn flashing(
-    clock_value: Duration,
+    updates_wrapping_counter: u8,
     iter: impl Iterator<Item = [u8; 3]> + Clone,
 ) -> impl Iterator<Item = [u8; 3]> + Clone {
-    // TODO: better calculation? quite hard because missing a flash is really bad
-    let flash = ((clock_value.as_millis() as u32) % 400) < 60;
+    let flash = updates_wrapping_counter % 2 == 0;
     iter.map(move |color| {
         if flash {
             [
