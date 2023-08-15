@@ -129,13 +129,13 @@ pub fn led_colors(
             strip,
             0,
             255,
-            iter::repeat([118, 25, 2]).take(match strip {
+            iter::repeat([0, 0, 0]).take(match strip {
                 Strip::NorthWest => NORTH_LEDS + WEST_LEDS,
                 Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
             }),
             |_, intensity| {
-                let color1 = [48, 18, 2];
-                let color2 = [240, 25, 0];
+                let color1 = [10, 4, 0];
+                let color2 = [40, 5, 0];
                 let intensity = 255 - ONE_MINUS_EXP_MINUS_X_TABLE[(255 - intensity) as usize];
                 [
                     ((color1[0] as u16 * (255 - intensity) as u16
