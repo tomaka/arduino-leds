@@ -136,7 +136,7 @@ pub fn led_colors(
                 Strip::SouthEast => SOUTH_LEDS + EAST_LEDS,
             }),
             |_, intensity| {
-                let color1 = [10, 4, 0];
+                let color1 = [9, 3, 0];
                 let color2 = [40, 5, 0];
                 let intensity = 255 - ONE_MINUS_EXP_MINUS_X_TABLE[(255 - intensity) as usize];
                 [
