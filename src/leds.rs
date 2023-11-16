@@ -165,9 +165,9 @@ pub fn led_colors(
                 }
             };
 
-            let color1 = color(clock_value.as_secs() as u8);
-            let color2 = color((clock_value.as_secs() as u8).wrapping_add(1));
-            let lerp = ((clock_value.subsec_millis() as u32 * 255) / 1000) as u8;
+            let color1 = color(clock_value.as_secs() as u8 / 2);
+            let color2 = color((clock_value.as_secs() as u8 / 2).wrapping_add(1));
+            let lerp = ((clock_value.as_millis() as u32 * 256) / 2000) as u8;
 
             // TODO: dry
             fn avg(a: u8, b: u8, b_weight: u8) -> u8 {
